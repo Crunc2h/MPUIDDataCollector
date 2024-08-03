@@ -1,5 +1,5 @@
 import grequests, requests, json, functools, traceback
-from ..models import MPCase
+from ...internal_repr.models import MPCase
 from .filters import filter_mp_json_for_internal_repr
 SEARCH_LIMIT = 10000
 REQUEST_BATCH_SIZE = 50

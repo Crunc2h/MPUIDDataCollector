@@ -1,4 +1,5 @@
 from django.db import models
+from internal_repr_config import InternalReprKeysConfig
 
 def reset_db():
     Gender.objects.all().delete()
@@ -54,6 +55,10 @@ class State(models.Model):
 
     @staticmethod
     def get_state_from_str(state_str):
+        if not state_str:
+            return
+        
+        state_str = state_str.title()
         states = State.objects.all()
         matching_state = states.filter(name=state_str)
         if matching_state.count() > 1:
@@ -61,7 +66,7 @@ class State(models.Model):
         elif matching_state.count() == 1:
             return matching_state.first()
         elif matching_state.count() == 0:
-            new_state = State(name=state_str.title())
+            new_state = State(name=state_str)
             new_state.save()
             return new_state
         
@@ -77,6 +82,9 @@ class County(models.Model):
 
     @staticmethod
     def get_county_from_str(county_str):
+        if not county_str:
+            return 
+        county_str = county_str.title()
         counties = County.objects.all()
         matching_county = counties.filter(name=county_str)
         
@@ -85,7 +93,7 @@ class County(models.Model):
         elif matching_county.count() == 1:
             return matching_county.first()
         elif matching_county.count() == 0:
-            new_county = County(name=county_str.title())
+            new_county = County(name=county_str)
             new_county.save()
             return new_county
         
@@ -101,6 +109,9 @@ class City(models.Model):
 
     @staticmethod
     def get_city_from_str(city_str):
+        if not city_str:
+            return
+        city_str = city_str.title()
         counties = County.objects.all()
         cities = City.objects.all()
         
@@ -112,7 +123,7 @@ class City(models.Model):
         elif city_str in list(map(lambda county: county.name, counties)):
             return None
         elif matching_city.count() == 0:
-            new_city = City(name=city_str.title())
+            new_city = City(name=city_str)
             new_city.save()
             return new_city
 
@@ -133,23 +144,23 @@ class Sighting(models.Model):
 
     @staticmethod
     def create_sighting(sighting_data):
-        location_data = sighting_data["location_data"]
+        location_data = sighting_data[InternalReprKeysConfig.LOCATION_DATA]
         
         location = Location(
-            address = location_data["formatted_address"],
-            zip_code = location_data["zip_code"],
+            address = location_data[InternalReprKeysConfig.FORMATTED_ADDRESS],
+            zip_code = location_data[InternalReprKeysConfig.ZIP_CODE],
             
-            state = None if not location_data["state"] else State.get_state_from_str(location_data["state"].title()),
-            county = None if not location_data["county"] else County.get_county_from_str(location_data["county"].title()),
-            city = None if not location_data["city"] else City.get_city_from_str(location_data["city"].title()),
+            state = State.get_state_from_str(location_data[InternalReprKeysConfig.STATE]),
+            county = County.get_county_from_str(location_data[InternalReprKeysConfig.COUNTY]),
+            city =  City.get_city_from_str(location_data[InternalReprKeysConfig.CITY]),
 
-            lat = location_data["latitude"],
-            lon  = location_data["longitude"]
+            lat = location_data[InternalReprKeysConfig.LATITUDE],
+            lon  = location_data[InternalReprKeysConfig.LONGITUDE]
         )
         location.save()
 
         sighting = Sighting(
-            date = sighting_data["date"],
+            date = sighting_data[InternalReprKeysConfig.DT_SIGHTING],
             location = location
         )
         
@@ -172,6 +183,9 @@ class AgencyType(models.Model):
 
     @staticmethod
     def get_agency_type_from_str(agency_type_str):
+        if not agency_type_str:
+            return
+        agency_type_str = agency_type_str.title()
         agency_types = AgencyType.objects.all()
         matching_agency_type = agency_types.filter(name=agency_type_str)
         if matching_agency_type.count() > 1:
@@ -179,7 +193,7 @@ class AgencyType(models.Model):
         elif matching_agency_type.count() == 1:
             return matching_agency_type.first()
         elif matching_agency_type.count() == 0:
-            new_agency_type = AgencyType(name=agency_type_str.title())
+            new_agency_type = AgencyType(name=agency_type_str)
             new_agency_type.save()
             return new_agency_type
 
@@ -195,6 +209,9 @@ class Jurisdiction(models.Model):
 
     @staticmethod
     def get_jurisdiction_from_str(jurisdiction_str):
+        if not jurisdiction_str:
+            return
+        jurisdiction_str = jurisdiction_str.title()
         jurisdictions = Jurisdiction.objects.all()
         matching_jurisdiction = jurisdictions.filter(name=jurisdiction_str)
         if matching_jurisdiction.count() > 1:
@@ -202,7 +219,7 @@ class Jurisdiction(models.Model):
         elif matching_jurisdiction.count() == 1:
             return matching_jurisdiction.first()
         elif matching_jurisdiction.count() == 0:
-            new_jurisdiction = Jurisdiction(name=jurisdiction_str.title())
+            new_jurisdiction = Jurisdiction(name=jurisdiction_str)
             new_jurisdiction.save()
             return new_jurisdiction
 
@@ -218,6 +235,9 @@ class AgencyContactJobTitle(models.Model):
 
     @staticmethod
     def get_agency_contact_job_title(job_title_str):
+        if not job_title_str:
+            return
+        job_title_str = job_title_str.title()
         job_titles = AgencyContactJobTitle.objects.all()
         matching_job_title = job_titles.filter(name=job_title_str)
         if matching_job_title.count() > 1:
@@ -225,7 +245,7 @@ class AgencyContactJobTitle(models.Model):
         elif matching_job_title.count() == 1:
             return matching_job_title.first()
         elif matching_job_title.count() == 0:
-            new_job_title = AgencyContactJobTitle(name=job_title_str.title())
+            new_job_title = AgencyContactJobTitle(name=job_title_str)
             new_job_title.save()
             return new_job_title
 
@@ -241,6 +261,10 @@ class AgencyContactRole(models.Model):
 
     @staticmethod
     def get_agency_contact_role(jurisdiction_str):
+        if not jurisdiction_str:
+            return
+        jurisdiction_str = jurisdiction_str.title()
+        
         roles = AgencyContactRole.objects.all()
         matching_role = roles.filter(name=jurisdiction_str)
         if matching_role.count() > 1:
@@ -248,7 +272,7 @@ class AgencyContactRole(models.Model):
         elif matching_role.count() == 1:
             return matching_role.first()
         elif matching_role.count() == 0:
-            new_role = AgencyContactRole(name=jurisdiction_str.title())
+            new_role = AgencyContactRole(name=jurisdiction_str)
             new_role.save()
             return new_role
 
@@ -263,6 +287,9 @@ class Agency(models.Model):
 
     @staticmethod
     def get_agency_from_str(agency_str):
+        if not agency_str:
+            return
+        agency_str = agency_str.title()
         agencies = Agency.objects.all()
         matching_agency = agencies.filter(name=agency_str)
         if matching_agency.count() > 1:
@@ -275,25 +302,25 @@ class Agency(models.Model):
     @staticmethod
     def create_agency(agency_data):
         agency = Agency(
-            name = None if not agency_data["name"] else agency_data["name"].title(),
-            phone = None if not agency_data["phone"] else agency_data["phone"].title(),
+            name = None if not agency_data[InternalReprKeysConfig.STR_NAME] else agency_data[InternalReprKeysConfig.STR_NAME].title(),
+            phone = None if not agency_data[InternalReprKeysConfig.PHONE] else agency_data[InternalReprKeysConfig.PHONE].title(),
 
-            jurisdiction = None if not agency_data["jurisdiction"] else Jurisdiction.get_jurisdiction_from_str(agency_data["jurisdiction"].title()),
-            agency_type = None if not agency_data["agency_type"] else AgencyType.get_agency_type_from_str(agency_data["agency_type"].title()) 
+            jurisdiction = Jurisdiction.get_jurisdiction_from_str(agency_data[InternalReprKeysConfig.JURISDICTION]),
+            agency_type = AgencyType.get_agency_type_from_str(agency_data[InternalReprKeysConfig.AGENCY_TYPE]) 
         )
         agency.save()
         
         
         location = Location(
-            state = None if not agency_data["state"] else State.get_state_from_str(agency_data["state"].title()),
-            county = None if not agency_data["county"] else County.get_county_from_str(agency_data["county"].title()),
-            city = None if not agency_data["city"] else City.get_city_from_str(agency_data["city"].title()),
+            state = State.get_state_from_str(agency_data[InternalReprKeysConfig.STATE]),
+            county = County.get_county_from_str(agency_data[InternalReprKeysConfig.COUNTY]),
+            city = City.get_city_from_str(agency_data[InternalReprKeysConfig.CITY]),
             
-            zip_code = agency_data["zip_code"],
-            address = f"{'' if not agency_data['state'] else agency_data['state'] + ', '}\
-            {'' if not agency_data['county'] else agency_data['county'] + ', '}\
-            {'' if not agency_data['city'] else agency_data['city'] + ', '}\
-            {'' if not agency_data['street'] else agency_data['street']}"            
+            zip_code = agency_data[InternalReprKeysConfig.ZIP_CODE],
+            address = f"{'' if not agency_data[InternalReprKeysConfig.STATE] else agency_data[InternalReprKeysConfig.STATE] + ', '}\
+            {'' if not agency_data[InternalReprKeysConfig.COUNTY] else agency_data[InternalReprKeysConfig.COUNTY] + ', '}\
+            {'' if not agency_data[InternalReprKeysConfig.CITY] else agency_data[InternalReprKeysConfig.CITY] + ', '}\
+            {'' if not agency_data[InternalReprKeysConfig.STREET] else agency_data[InternalReprKeysConfig.STREET]}"            
         )
         location.save()
 
@@ -313,6 +340,9 @@ class AgencyContact(models.Model):
 
     @staticmethod
     def get_agency_contact_from_str(agency_contact_str):
+        if not agency_contact_str:
+            return
+        agency_contact_str = agency_contact_str.title()
         agency_contacts = AgencyContact.objects.all()
         matching_contact = agency_contacts.filter(full_name=agency_contact_str)
         if matching_contact.count() > 1:
@@ -325,11 +355,11 @@ class AgencyContact(models.Model):
     @staticmethod
     def create_contact(contact_data):
         contact = AgencyContact(
-            first_name = contact_data["first_name"].title(),
-            last_name = contact_data["last_name"].title(),
-            full_name = contact_data["first_name"].title() + ' ' +contact_data["last_name"].title(), 
-            job_title = None if not contact_data["job_title"] else AgencyContactJobTitle.get_agency_contact_job_title(contact_data["job_title"].title()),
-            role = None if not contact_data["role"] else AgencyContactRole.get_agency_contact_role(contact_data["role"].title())
+            first_name = contact_data[InternalReprKeysConfig.FIRST_NAME].title(),
+            last_name = contact_data[InternalReprKeysConfig.LAST_NAME].title(),
+            full_name = contact_data[InternalReprKeysConfig.FIRST_NAME].title() + ' ' +contact_data[InternalReprKeysConfig.LAST_NAME].title(), 
+            job_title = AgencyContactJobTitle.get_agency_contact_job_title(contact_data[InternalReprKeysConfig.AGENCY_CONTACT_JT]),
+            role = AgencyContactRole.get_agency_contact_role(contact_data[InternalReprKeysConfig.AGENCY_CONTACT_JR])
         )
         contact.save()
         return contact
@@ -344,21 +374,24 @@ class InvestigatingAgencyData(models.Model):
     @staticmethod
     def create_investigating_agency_data(investigating_agency_data):
         data = InvestigatingAgencyData(
-            case_number = investigating_agency_data["case_number"],
-            date_reported = investigating_agency_data["date_reported"]
+            case_number = investigating_agency_data[InternalReprKeysConfig.CASE_NUMBER],
+            date_reported = investigating_agency_data[InternalReprKeysConfig.DT_CASE_REPORTED]
         )
         data.save()
 
-        agency = None if not investigating_agency_data["name"] else Agency.get_agency_from_str(investigating_agency_data["name"].title())
+        agency = Agency.get_agency_from_str(investigating_agency_data[InternalReprKeysConfig.STR_NAME])
         if not agency:
             agency = Agency.create_agency(investigating_agency_data)
         
         data.agency = agency
         
-        if investigating_agency_data["contact"]:
-            contact = AgencyContact.get_agency_contact_from_str(investigating_agency_data["contact"]["first_name"].title() + investigating_agency_data["contact"]["last_name"].title())
+        if investigating_agency_data[InternalReprKeysConfig.AGENCY_CONTACT]:
+            contact = AgencyContact.get_agency_contact_from_str(
+                    (investigating_agency_data[InternalReprKeysConfig.AGENCY_CONTACT][InternalReprKeysConfig.FIRST_NAME] 
+                    + ' ' +investigating_agency_data[InternalReprKeysConfig.AGENCY_CONTACT][InternalReprKeysConfig.LAST_NAME])
+                )
             if not contact:
-                contact = AgencyContact.create_contact(investigating_agency_data["contact"])
+                contact = AgencyContact.create_contact(investigating_agency_data[InternalReprKeysConfig.AGENCY_CONTACT])
         
             contact.agency = agency
             data.contact = contact
@@ -386,6 +419,9 @@ class Gender(models.Model):
 
     @staticmethod
     def get_gender_from_str(gender_str):
+        if not gender_str:
+            return 
+        gender_str = gender_str.title()
         genders = Gender.objects.all()
         matching_gender = genders.filter(name=gender_str)
         if matching_gender.count() > 1:
@@ -393,7 +429,7 @@ class Gender(models.Model):
         elif matching_gender.count() == 1:
             return matching_gender.first()
         elif matching_gender.count() == 0:
-            new_gender = Gender(name=gender_str.title())
+            new_gender = Gender(name=gender_str)
             new_gender.save()
             return new_gender
         
@@ -409,6 +445,9 @@ class Ethnicity(models.Model):
 
     @staticmethod
     def get_ethnicity_from_str(ethnicity_str):
+        if not ethnicity_str:
+            return
+        ethnicity_str = ethnicity_str.title() 
         ethnicities = Ethnicity.objects.all()
         matching_ethnicity = ethnicities.filter(name=ethnicity_str)
         if matching_ethnicity.count() > 1:
@@ -416,7 +455,7 @@ class Ethnicity(models.Model):
         elif matching_ethnicity.count() == 1:
             return matching_ethnicity.first()
         elif matching_ethnicity.count() == 0:
-            new_ethnicity = Ethnicity(name=ethnicity_str.title())
+            new_ethnicity = Ethnicity(name=ethnicity_str)
             new_ethnicity.save()
             return new_ethnicity
              
@@ -432,6 +471,9 @@ class TribalAffiliation(models.Model):
 
     @staticmethod
     def get_tribal_affiliation_from_str(affiliation_str):
+        if not affiliation_str:
+            return
+        affiliation_str = affiliation_str.title()
         affiliations = TribalAffiliation.objects.all()
         matching_affiliation = affiliations.filter(name=affiliation_str)
         if matching_affiliation.count() > 1:
@@ -439,7 +481,7 @@ class TribalAffiliation(models.Model):
         elif matching_affiliation.count() == 1:
             return matching_affiliation.first()
         elif matching_affiliation.count() == 0:
-            new_affiliation = TribalAffiliation(name=affiliation_str.title())
+            new_affiliation = TribalAffiliation(name=affiliation_str)
             new_affiliation.save()
             return new_affiliation
         
@@ -455,6 +497,9 @@ class Tribe(models.Model):
 
     @staticmethod
     def get_tribe_from_str(tribe_str):
+        if not tribe_str:
+            return
+        tribe_str = tribe_str.title()
         tribes = Tribe.objects.all()
         matching_tribe = tribes.filter(name=tribe_str)
         if matching_tribe.count() > 1:
@@ -462,7 +507,7 @@ class Tribe(models.Model):
         elif matching_tribe.count() == 1:
             return matching_tribe.first()
         elif matching_tribe.count() == 0:
-            new_tribe = Tribe(name=tribe_str.title())
+            new_tribe = Tribe(name=tribe_str)
             new_tribe.save()
             return new_tribe
 
@@ -493,30 +538,30 @@ class SubjectDemographics(models.Model):
     def create_subject_demographics(subject_demographics_data):
         
         demographics = SubjectDemographics(
-            current_min_age = subject_demographics_data["current_min_age"],
-            current_max_age = subject_demographics_data["current_max_age"],
-            missing_min_age = subject_demographics_data["missing_min_age"],
-            missing_max_age = subject_demographics_data["missing_max_age"],
+            current_min_age = subject_demographics_data[InternalReprKeysConfig.CURRENT_MIN_AGE],
+            current_max_age = subject_demographics_data[InternalReprKeysConfig.CURRENT_MAX_AGE],
+            missing_min_age = subject_demographics_data[InternalReprKeysConfig.MISSING_MIN_AGE],
+            missing_max_age = subject_demographics_data[InternalReprKeysConfig.MISSING_MAX_AGE],
             
-            height_from_inches = subject_demographics_data["height_from_inches"],
-            height_to_inches = subject_demographics_data["height_to_inches"],
-            weight_from_lbs = subject_demographics_data["weight_from_lbs"],
-            weight_to_lbs = subject_demographics_data["weight_to_lbs"],
+            height_from_inches = subject_demographics_data[InternalReprKeysConfig.HEIGHT_FROM_INCHES],
+            height_to_inches = subject_demographics_data[InternalReprKeysConfig.HEIGHT_TO_INCHES],
+            weight_from_lbs = subject_demographics_data[InternalReprKeysConfig.WEIGHT_FROM_LBS],
+            weight_to_lbs = subject_demographics_data[InternalReprKeysConfig.WEIGHT_TO_LBS],
 
-            primary_ethnicity = None if not subject_demographics_data["primary_ethnicity"] else Ethnicity.get_ethnicity_from_str(subject_demographics_data["primary_ethnicity"].title()),
-            gender = None if not subject_demographics_data["gender"] else Gender.get_gender_from_str(subject_demographics_data["gender"].title()),
-            tribal_affiliation = None if not subject_demographics_data["tribal_affiliation"] else TribalAffiliation.get_tribal_affiliation_from_str(subject_demographics_data["tribal_affiliation"].title()),
+            primary_ethnicity = Ethnicity.get_ethnicity_from_str(subject_demographics_data[InternalReprKeysConfig.PRIMARY_ETHNICITY]),
+            gender = Gender.get_gender_from_str(subject_demographics_data[InternalReprKeysConfig.GENDER]),
+            tribal_affiliation = TribalAffiliation.get_tribal_affiliation_from_str(subject_demographics_data[InternalReprKeysConfig.TRIBAL_AFFILIATION]),
         )
         demographics.save()
 
-        for ethnicity in subject_demographics_data["ethnicities"]:
-            if ethnicity and ethnicity["name"]:
-                demographics.ethnicities.add(Ethnicity.get_ethnicity_from_str(ethnicity["name"].title()))
+        for ethnicity in subject_demographics_data[InternalReprKeysConfig.ETHNICITIES]:
+            if ethnicity and ethnicity[InternalReprKeysConfig.STR_NAME]:
+                demographics.ethnicities.add(Ethnicity.get_ethnicity_from_str(ethnicity[InternalReprKeysConfig.STR_NAME]))
 
-        for tribal_association in subject_demographics_data["tribe_associations"]:
-            if tribal_association["tribe_name"]:
-                tribe = Tribe.get_tribe_from_str(tribal_association["tribe_name"].title())
-                enrollment = tribal_association["is_enrolled"]
+        for tribal_association in subject_demographics_data[InternalReprKeysConfig.TRIBE_ASSOCIATIONS]:
+            if tribal_association[InternalReprKeysConfig.TRIBE_NAME]:
+                tribe = Tribe.get_tribe_from_str(tribal_association[InternalReprKeysConfig.TRIBE_NAME])
+                enrollment = tribal_association[InternalReprKeysConfig.TRIBE_ENROLLMENT]
                 association = TribalAssociation(
                     tribe = tribe,
                     is_enrolled = enrollment
@@ -542,6 +587,9 @@ class EyeColor(models.Model):
 
     @staticmethod
     def get_eye_color_from_str(color_str):
+        if not color_str:
+            return
+        color_str = color_str.title()
         colors = EyeColor.objects.all()
         matching_color = colors.filter(name=color_str)
         if matching_color.count() > 1:
@@ -549,7 +597,7 @@ class EyeColor(models.Model):
         elif matching_color.count() == 1:
             return matching_color.first()
         elif matching_color.count() == 0:
-            new_color = EyeColor(name=color_str.title())
+            new_color = EyeColor(name=color_str)
             new_color.save()
             return new_color
 
@@ -565,6 +613,9 @@ class HairColor(models.Model):
 
     @staticmethod
     def get_hair_color_from_str(color_str):
+        if not color_str:
+            return
+        color_str = color_str.title()
         colors = HairColor.objects.all()
         matching_color = colors.filter(name=color_str)
         if matching_color.count() > 1:
@@ -572,7 +623,7 @@ class HairColor(models.Model):
         elif matching_color.count() == 1:
             return matching_color.first()
         elif matching_color.count() == 0:
-            new_color = HairColor(name=color_str.title())
+            new_color = HairColor(name=color_str)
             new_color.save()
             return new_color
 
@@ -588,6 +639,9 @@ class DescriptiveFeatureCategory(models.Model):
 
     @staticmethod
     def get_desc_feature_category_from_str(desc_feature_category_str):
+        if not desc_feature_category_str:
+            return
+        desc_feature_category_str = desc_feature_category_str.title()
         desc_feature_categories = DescriptiveFeatureCategory.objects.all()
         matching_category = desc_feature_categories.filter(name=desc_feature_category_str)
         if matching_category.count() > 1:
@@ -595,7 +649,7 @@ class DescriptiveFeatureCategory(models.Model):
         elif matching_category.count() == 1:
             return matching_category.first()
         elif matching_category.count() == 0:
-            new_category = DescriptiveFeatureCategory(name=desc_feature_category_str.title())
+            new_category = DescriptiveFeatureCategory(name=desc_feature_category_str)
             new_category.save()
             return new_category
 
@@ -612,25 +666,25 @@ class SubjectDescription(models.Model):
 
     @staticmethod
     def create_subject_description(**subject_description_data):
-        physical_features = subject_description_data["physical_features"]
+        physical_features = subject_description_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_PHYSICAL_FEATURES]
         
         description = SubjectDescription(
 
-            hair_color = None if not physical_features["hair_color"] else HairColor.get_hair_color_from_str(physical_features["hair_color"].title()),
-            left_eye_color = None if not physical_features["left_eye_color"] else EyeColor.get_eye_color_from_str(physical_features["left_eye_color"].title()),
-            right_eye_color = None if not physical_features["right_eye_color"] else EyeColor.get_eye_color_from_str(physical_features["right_eye_color"].title()),
+            hair_color = HairColor.get_hair_color_from_str(physical_features[InternalReprKeysConfig.HAIR_COLOR]),
+            left_eye_color = EyeColor.get_eye_color_from_str(physical_features[InternalReprKeysConfig.LEFT_EYE_COLOR]),
+            right_eye_color = EyeColor.get_eye_color_from_str(physical_features[InternalReprKeysConfig.RIGHT_EYE_COLOR]),
 
-            head_hair_description = physical_features["head_hair_description"],
-            body_hair_description = physical_features["body_hair_description"],
-            facial_hair_description = physical_features["facial_hair_description"],
-            eye_description = physical_features["eye_description"],
+            head_hair_description = physical_features[InternalReprKeysConfig.HEAD_HAIR_DESC],
+            body_hair_description = physical_features[InternalReprKeysConfig.BODY_HAIR_DESC],
+            facial_hair_description = physical_features[InternalReprKeysConfig.FACIAL_HAIR_DESC],
+            eye_description = physical_features[InternalReprKeysConfig.EYE_DESC],
         )
         description.save()
         
-        for distinctive_physical_feature in subject_description_data["distinctive_physical_features"]:
+        for distinctive_physical_feature in subject_description_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_DISTINCTIVE_PHYSICAL_FEATURES]:
             feature = DescriptiveFeatureArticle(
-                category = DescriptiveFeatureCategory.get_desc_feature_category_from_str(distinctive_physical_feature["category_name"].title()),
-                description = distinctive_physical_feature["description"],
+                category = DescriptiveFeatureCategory.get_desc_feature_category_from_str(distinctive_physical_feature[InternalReprKeysConfig.STR_CATEGORY_NAME]),
+                description = distinctive_physical_feature[InternalReprKeysConfig.STR_DESCRIPTION],
                 subject_description = description
             )
             feature.save()
@@ -658,10 +712,10 @@ class SubjectIdentification(models.Model):
     @staticmethod
     def create_subject_identification(subject_identification_data):
         identification = SubjectIdentification(
-            first_name = subject_identification_data["first_name"],
-            last_name = subject_identification_data["last_name"],
-            middle_name = subject_identification_data["middle_name"],
-            nicknames = subject_identification_data["nicknames"],
+            first_name = subject_identification_data[InternalReprKeysConfig.FIRST_NAME],
+            last_name = subject_identification_data[InternalReprKeysConfig.LAST_NAME],
+            middle_name = subject_identification_data[InternalReprKeysConfig.MIDDLE_NAME],
+            nicknames = subject_identification_data[InternalReprKeysConfig.NICKNAMES],
         )
 
         identification.save()
@@ -683,6 +737,9 @@ class VehicleColor(models.Model):
 
     @staticmethod
     def get_vehicle_color_from_str(vehicle_color_str):
+        if not vehicle_color_str:
+            return
+        vehicle_color_str = vehicle_color_str.title()
         vehicle_colors = VehicleColor.objects.all()
         matching_vehicle_color = vehicle_colors.filter(name=vehicle_color_str)
         if matching_vehicle_color.count() > 1:
@@ -690,7 +747,7 @@ class VehicleColor(models.Model):
         elif matching_vehicle_color.count() == 1:
             return matching_vehicle_color.first()
         elif matching_vehicle_color.count() == 0:
-            new_color = VehicleColor(name=vehicle_color_str.title())
+            new_color = VehicleColor(name=vehicle_color_str)
             new_color.save()
             return new_color  
 
@@ -706,6 +763,9 @@ class VehicleMake(models.Model):
 
     @staticmethod
     def get_vehicle_make_from_str(vehicle_make_str):
+        if not vehicle_make_str:
+            return
+        vehicle_make_str = vehicle_make_str.title()
         vehicle_makes = VehicleMake.objects.all()
         matching_vehicle_make = vehicle_makes.filter(name=vehicle_make_str)
         if matching_vehicle_make.count() > 1:
@@ -713,7 +773,7 @@ class VehicleMake(models.Model):
         elif matching_vehicle_make.count() == 1:
             return matching_vehicle_make.first()
         elif matching_vehicle_make.count() == 0:
-            new_make = VehicleMake(name=vehicle_make_str.title())
+            new_make = VehicleMake(name=vehicle_make_str)
             new_make.save()
             return new_make
         
@@ -729,6 +789,9 @@ class VehicleModel(models.Model):
 
     @staticmethod
     def get_vehicle_model_from_str(vehicle_model_str):
+        if not vehicle_model_str:
+            return
+        vehicle_model_str = vehicle_model_str.title()
         vehicle_models = VehicleModel.objects.all()
         matching_vehicle_model = vehicle_models.filter(name=vehicle_model_str)
         if matching_vehicle_model.count() > 1:
@@ -736,7 +799,7 @@ class VehicleModel(models.Model):
         elif matching_vehicle_model.count() == 1:
             return matching_vehicle_model.first()
         elif matching_vehicle_model.count() == 0:
-            new_model = VehicleModel(name=vehicle_model_str.title())
+            new_model = VehicleModel(name=vehicle_model_str)
             new_model.save()
             return new_model
         
@@ -752,6 +815,9 @@ class VehicleStyle(models.Model):
 
     @staticmethod
     def get_vehicle_style_from_str(vehicle_style_str):
+        if not vehicle_style_str:
+            return
+        vehicle_style_str = vehicle_style_str.title()
         vehicle_styles = VehicleStyle.objects.all()
         matching_vehicle_style = vehicle_styles.filter(name=vehicle_style_str)
         if matching_vehicle_style.count() > 1:
@@ -759,7 +825,7 @@ class VehicleStyle(models.Model):
         elif matching_vehicle_style.count() == 1:
             return matching_vehicle_style.first()
         elif matching_vehicle_style.count() == 0:
-            new_style = VehicleStyle(name=vehicle_style_str.title())
+            new_style = VehicleStyle(name=vehicle_style_str)
             new_style.save()
             return new_style
 
@@ -775,6 +841,9 @@ class DescriptiveItemCategory(models.Model):
 
     @staticmethod
     def get_desc_item_category_from_str(desc_item_category_str):
+        if not desc_item_category_str:
+            return
+        desc_item_category_str = desc_item_category_str.title()
         desc_item_categories = DescriptiveItemCategory.objects.all()
         matching_category = desc_item_categories.filter(name=desc_item_category_str)
         if matching_category.count() > 1:
@@ -782,7 +851,7 @@ class DescriptiveItemCategory(models.Model):
         elif matching_category.count() == 1:
             return matching_category.first()
         elif matching_category.count() == 0:
-            new_category = DescriptiveItemCategory(name=desc_item_category_str.title())
+            new_category = DescriptiveItemCategory(name=desc_item_category_str)
             new_category.save()
             return new_category
 
@@ -792,28 +861,28 @@ class SubjectRelatedItems(models.Model):
         related_items = SubjectRelatedItems()
         related_items.save()
 
-        for item_article in subject_related_items_data["clothing_and_accessories_info"]:
+        for item_article in subject_related_items_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_CLOTHING_AND_ACCESSORIES]:
             item = DescriptiveItemArticle(
-                category = DescriptiveItemCategory.get_desc_item_category_from_str(item_article["category_name"].title()),
-                description = item_article["description"],
+                category = DescriptiveItemCategory.get_desc_item_category_from_str(item_article[InternalReprKeysConfig.STR_CATEGORY_NAME]),
+                description = item_article[InternalReprKeysConfig.STR_DESCRIPTION],
 
                 subject_related_items = related_items
             )
             item.save()
 
-        for vehicle_info in subject_related_items_data["vehicles_info"]:
+        for vehicle_info in subject_related_items_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_VEHICLES]:
             vehicle = VehicleInformation(
-                vehicle_year = vehicle_info["vehicle_year"],
-                tag_expiration_year = vehicle_info["tag_expiration_year"],
+                vehicle_year = vehicle_info[InternalReprKeysConfig.VEHICLE_YEAR],
+                tag_expiration_year = vehicle_info[InternalReprKeysConfig.VEHICLE_TAG_EXPIRATION_YEAR],
                 
-                tag_state = None if not vehicle_info["tag_state"] else State.get_state_from_str(vehicle_info["tag_state"].title()),
-                tag_number = vehicle_info["tag_number"],
-                comment = vehicle_info["comment"],
+                tag_state = State.get_state_from_str(vehicle_info[InternalReprKeysConfig.VEHICLE_TAG_STATE]),
+                tag_number = vehicle_info[InternalReprKeysConfig.VEHICLE_TAG_NUM],
+                comment = vehicle_info[InternalReprKeysConfig.VEHICLE_COMMENT],
                 
-                vehicle_make = None if not vehicle_info["vehicle_make"] else VehicleMake.get_vehicle_make_from_str(vehicle_info["vehicle_make"].title()),
-                vehicle_model = None if not vehicle_info["vehicle_model"] else VehicleModel.get_vehicle_model_from_str(vehicle_info["vehicle_model"].title()),
-                vehicle_style = None if not vehicle_info["vehicle_style"] else VehicleStyle.get_vehicle_style_from_str(vehicle_info["vehicle_style"].title()),
-                vehicle_color = None if not vehicle_info["vehicle_color"] else VehicleColor.get_vehicle_color_from_str(vehicle_info["vehicle_color"].title()),
+                vehicle_make = VehicleMake.get_vehicle_make_from_str(vehicle_info[VehicleMake]),
+                vehicle_model = VehicleModel.get_vehicle_model_from_str(vehicle_info[InternalReprKeysConfig.VEHICLE_MODEL]),
+                vehicle_style = VehicleStyle.get_vehicle_style_from_str(vehicle_info[InternalReprKeysConfig.VEHICLE_STYLE]),
+                vehicle_color = VehicleColor.get_vehicle_color_from_str(vehicle_info[InternalReprKeysConfig.VEHICLE_COLOR]),
 
                 subject_related_items = related_items
             )
@@ -865,6 +934,9 @@ class MissingFromTribalLand(models.Model):
 
     @staticmethod
     def get_missing_from_tribal_land_from_str(missing_from_tbland_str):
+        if not missing_from_tbland_str:
+            return
+        missing_from_tbland_str = missing_from_tbland_str.title()
         missing_from_tblands = MissingFromTribalLand.objects.all()
         matching_mftbland = missing_from_tblands.filter(name=missing_from_tbland_str)
         if matching_mftbland.count() > 1:
@@ -872,7 +944,7 @@ class MissingFromTribalLand(models.Model):
         elif matching_mftbland.count() == 1:
             return matching_mftbland.first()
         elif matching_mftbland.count() == 0:
-            new_mftbland = MissingFromTribalLand(name=missing_from_tbland_str.title())
+            new_mftbland = MissingFromTribalLand(name=missing_from_tbland_str)
             new_mftbland.save()
             return new_mftbland
         
@@ -888,6 +960,9 @@ class PrimaryResidenceOnTribalLand(models.Model):
 
     @staticmethod
     def get_primary_residence_on_tribal_land(primary_residence_on_tbland_str):
+        if not primary_residence_on_tbland_str:
+            return
+        primary_residence_on_tbland_str = primary_residence_on_tbland_str.title()
         pr_on_tblands = PrimaryResidenceOnTribalLand.objects.all()
         matching_pr_on_tbland = pr_on_tblands.filter(name=primary_residence_on_tbland_str)
         if matching_pr_on_tbland.count() > 1:
@@ -895,7 +970,7 @@ class PrimaryResidenceOnTribalLand(models.Model):
         elif matching_pr_on_tbland.count() == 1:
             return matching_pr_on_tbland.first()
         elif matching_pr_on_tbland.count() == 0:
-            new_pr_on_tbland = PrimaryResidenceOnTribalLand(name=primary_residence_on_tbland_str.title())
+            new_pr_on_tbland = PrimaryResidenceOnTribalLand(name=primary_residence_on_tbland_str)
             new_pr_on_tbland.save()
             return new_pr_on_tbland
 
@@ -929,16 +1004,16 @@ class MPCase(models.Model):
 
     @staticmethod 
     def create_mp_case(case_data):
-        subject_identification_data = case_data["subject_identification_data"]
-        subject_demographics_data = case_data["demographics"]
+        subject_identification_data = case_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_IDENTIFICATION]
+        subject_demographics_data = case_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_DEMOGRAPHICS]
 
-        physical_features = case_data["physical_features"]
-        distinctive_physical_features = case_data["distinctive_physical_features"]
+        physical_features = case_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_PHYSICAL_FEATURES]
+        distinctive_physical_features = case_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_DISTINCTIVE_PHYSICAL_FEATURES]
 
-        clothing_and_accessories_info = case_data["clothing_and_accessories_info"]
-        vehicles_info = case_data["vehicles_info"]
+        clothing_and_accessories_info = case_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_CLOTHING_AND_ACCESSORIES]
+        vehicles_info = case_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_VEHICLES]
 
-        sighting_data = case_data["sighting_data"]
+        sighting_data = case_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_SIGHTING]
 
         subject_identification = SubjectIdentification.create_subject_identification(subject_identification_data)
         subject_demographics = SubjectDemographics.create_subject_demographics(subject_demographics_data)
@@ -949,18 +1024,18 @@ class MPCase(models.Model):
         last_known_sighting = Sighting.create_sighting(sighting_data)
         
         case = MPCase(
-            source_link = case_data["source_link"],
+            source_link = case_data[InternalReprKeysConfig.SOURCE_LINK],
             
-            namus_id = case_data["namus_id"],
-            namus_id_formatted = case_data["namus_id_formatted"],
-            ncmec_number = case_data["ncmec_number"],
+            namus_id = case_data[InternalReprKeysConfig.NAMUS_ID],
+            namus_id_formatted = case_data[InternalReprKeysConfig.NAMUS_ID_FORMATTED],
+            ncmec_number = case_data[InternalReprKeysConfig.NCMEC_NUM],
 
-            case_created = case_data["created"],
-            case_last_modified = case_data["last_modified"],
+            case_created = case_data[InternalReprKeysConfig.DT_SOURCE_CREATED],
+            case_last_modified = case_data[InternalReprKeysConfig.DT_SOURCE_LAST_MODIFIED],
 
-            circumstances_of_disappearance = case_data["circumstances_of_disappearance"],
+            circumstances_of_disappearance = case_data[InternalReprKeysConfig.CIRCUMSTANCES_OF_DISAPPEARANCE],
 
-            is_resolved = case_data["is_resolved"],
+            is_resolved = case_data[InternalReprKeysConfig.CASE_RESOLVED],
 
             identification = subject_identification,
             demographics = subject_demographics,
@@ -968,16 +1043,20 @@ class MPCase(models.Model):
             related_items = subject_related_items,
             last_known_location = last_known_sighting,
             
-            primary_residence_on_tribal_land = None if not sighting_data["location_data"]["primary_residence_on_tribal_land"] else PrimaryResidenceOnTribalLand.get_primary_residence_on_tribal_land(sighting_data["location_data"]["primary_residence_on_tribal_land"].title()),
-            missing_from_tribal_land = None if not sighting_data["location_data"]["missing_from_tribal_land"] else MissingFromTribalLand.get_missing_from_tribal_land_from_str(sighting_data["location_data"]["missing_from_tribal_land"].title()),
+            primary_residence_on_tribal_land = PrimaryResidenceOnTribalLand.get_primary_residence_on_tribal_land(
+                    sighting_data[InternalReprKeysConfig.LOCATION_DATA][InternalReprKeysConfig.PRIMARY_RESIDENCE_ON_TRIBAL_LAND]
+                ),
+            missing_from_tribal_land = MissingFromTribalLand.get_missing_from_tribal_land_from_str(
+                    sighting_data[InternalReprKeysConfig.LOCATION_DATA][InternalReprKeysConfig.MISSING_FROM_TRIBAL_LAND]
+                ),
 
-            primary_investigating_agency = None if not case_data["primary_investigating_agency"] else InvestigatingAgencyData.create_investigating_agency_data(case_data["primary_investigating_agency"]),
+            primary_investigating_agency = InvestigatingAgencyData.create_investigating_agency_data(case_data[InternalReprKeysConfig.CASE_DATA_INVESTIGATING_AGENCY_PRIMARY]),
 
         )
 
         case.save()
         
-        for investigating_agency_data in case_data["secondary_investigating_agencies"]:
+        for investigating_agency_data in case_data[InternalReprKeysConfig.CASE_DATA_INVESTIGATING_AGENCIES_SECONDARY]:
             data_object = InvestigatingAgencyData.create_investigating_agency_data(investigating_agency_data)
             case.secondary_investigating_agencies.add(data_object)
 
