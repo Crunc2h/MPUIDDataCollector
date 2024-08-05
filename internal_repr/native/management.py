@@ -1,0 +1,35 @@
+from internal_repr.models import *
+
+def reset_db():
+    Gender.objects.all().delete()
+    Ethnicity.objects.all().delete()
+    
+    HairColor.objects.all().delete()
+    EyeColor.objects.all().delete()
+    
+    TribalAffiliation.objects.all().delete()
+    MPCase.objects.all().delete()
+    SubjectDescription.objects.all().delete()
+    SubjectIdentification.objects.all().delete()
+    SubjectRelatedItems.objects.all().delete()
+    DescriptiveFeatureArticle.objects.all().delete()
+    DescriptiveItemArticle.objects.all().delete()
+    Location.objects.all().delete()
+    Sighting.objects.all().delete()
+    VehicleInformation.objects.all().delete()
+    State.objects.all().delete()
+    County.objects.all().delete()
+    City.objects.all().delete()
+    VehicleColor.objects.all().delete()
+    VehicleMake.objects.all().delete()
+    VehicleModel.objects.all().delete()
+    VehicleStyle.objects.all().delete()
+    DescriptiveFeatureCategory.objects.all().delete()
+    DescriptiveItemCategory.objects.all().delete()
+    PrimaryResidenceOnTribalLand.objects.all().delete()
+    MissingFromTribalLand.objects.all().delete()
+    Tribe.objects.all().delete()
+
+    Agency.objects.all().delete()
+    InvestigatingAgencyData.objects.all().delete()
+    AgencyContact.objects.all().delete()

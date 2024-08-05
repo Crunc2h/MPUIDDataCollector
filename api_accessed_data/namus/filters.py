@@ -1,9 +1,11 @@
 import datetime
 from internal_repr.internal_repr_config import InternalReprKeysConfig
 
-def filter_mp_json_for_internal_repr(json, url):
+MP_URL_BASE = "https://www.namus.gov/MissingPersons/Case#/{NAMUS_ID}"
+
+def filter_mp_json_for_internal_repr(json):
     case_data = {}
-    case_data[InternalReprKeysConfig.SOURCE_LINK] = url
+    case_data[InternalReprKeysConfig.SOURCE_LINK] = MP_URL_BASE.format(NAMUS_ID=json["id"])
     case_data[InternalReprKeysConfig.NAMUS_ID] = json["id"]
     case_data[InternalReprKeysConfig.NAMUS_ID_FORMATTED] = json["idFormatted"]
     case_data[InternalReprKeysConfig.NCMEC_NUM] = json.get("caseIdentification", {}).get("ncmecNumber")

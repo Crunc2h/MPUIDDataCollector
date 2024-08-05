@@ -1,42 +1,6 @@
 from django.db import models
-from internal_repr_config import InternalReprKeysConfig
-
-def reset_db():
-    Gender.objects.all().delete()
-    Ethnicity.objects.all().delete()
-    
-    HairColor.objects.all().delete()
-    EyeColor.objects.all().delete()
-    
-    TribalAffiliation.objects.all().delete()
-    MPCase.objects.all().delete()
-    SubjectDescription.objects.all().delete()
-    SubjectIdentification.objects.all().delete()
-    SubjectRelatedItems.objects.all().delete()
-    DescriptiveFeatureArticle.objects.all().delete()
-    DescriptiveItemArticle.objects.all().delete()
-    Location.objects.all().delete()
-    Sighting.objects.all().delete()
-    VehicleInformation.objects.all().delete()
-    State.objects.all().delete()
-    County.objects.all().delete()
-    City.objects.all().delete()
-    VehicleColor.objects.all().delete()
-    VehicleMake.objects.all().delete()
-    VehicleModel.objects.all().delete()
-    VehicleStyle.objects.all().delete()
-    DescriptiveFeatureCategory.objects.all().delete()
-    DescriptiveItemCategory.objects.all().delete()
-    PrimaryResidenceOnTribalLand.objects.all().delete()
-    MissingFromTribalLand.objects.all().delete()
-    Tribe.objects.all().delete()
-
-    Agency.objects.all().delete()
-    InvestigatingAgencyData.objects.all().delete()
-    AgencyContact.objects.all().delete()
-
-
-
+from .native.case_data_keys import InternalReprKeysConfig
+from .native.case_stats import CaseStats
 
 
 ######============================MISC DATA TYPES============================######
@@ -134,13 +98,27 @@ class Location(models.Model):
     state = models.ForeignKey(State, on_delete=models.CASCADE, related_name="locations", blank=True, null=True)
     county = models.ForeignKey(County, on_delete=models.CASCADE, related_name="locations", blank=True, null=True)
     city = models.ForeignKey(City, on_delete=models.CASCADE, related_name="locations", blank=True, null=True)
+    street = models.CharField(max_length=256, blank=True, null=True)
 
     lat = models.FloatField(blank=True, null=True)
     lon = models.FloatField(blank=True, null=True)
 
+    def __str__(self) -> str:
+        return self.address
+
+    def save(self, *args, **kwargs):
+        self.address = f"{'' if not self.state else self.state + ', '}\
+                    {'' if not self.county else self.county + ', '}\
+                    {'' if not self.city else self.city + ', '}\
+                    {'' if not self.street else self.street}"
+        return super().save()
+
 class Sighting(models.Model):
     date = models.DateField()
     location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name="sightings")
+
+    def __str__(self) -> str:
+        return f"{self.location.address} on {self.date.strftime('%d/%m/%Y')}"
 
     @staticmethod
     def create_sighting(sighting_data):
@@ -285,6 +263,9 @@ class Agency(models.Model):
     
     location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name="agencies", blank=True, null=True)
 
+    def __str__(self) -> str:
+        return f"{self.name}{'' if not self.location else ', ' + self.location.address}"
+    
     @staticmethod
     def get_agency_from_str(agency_str):
         if not agency_str:
@@ -315,12 +296,9 @@ class Agency(models.Model):
             state = State.get_state_from_str(agency_data[InternalReprKeysConfig.STATE]),
             county = County.get_county_from_str(agency_data[InternalReprKeysConfig.COUNTY]),
             city = City.get_city_from_str(agency_data[InternalReprKeysConfig.CITY]),
-            
-            zip_code = agency_data[InternalReprKeysConfig.ZIP_CODE],
-            address = f"{'' if not agency_data[InternalReprKeysConfig.STATE] else agency_data[InternalReprKeysConfig.STATE] + ', '}\
-            {'' if not agency_data[InternalReprKeysConfig.COUNTY] else agency_data[InternalReprKeysConfig.COUNTY] + ', '}\
-            {'' if not agency_data[InternalReprKeysConfig.CITY] else agency_data[InternalReprKeysConfig.CITY] + ', '}\
-            {'' if not agency_data[InternalReprKeysConfig.STREET] else agency_data[InternalReprKeysConfig.STREET]}"            
+            street = agency_data[InternalReprKeysConfig.STREET],
+            zip_code = agency_data[InternalReprKeysConfig.ZIP_CODE],         
+               
         )
         location.save()
 
@@ -337,6 +315,9 @@ class AgencyContact(models.Model):
     role = models.ForeignKey(AgencyContactRole, on_delete=models.CASCADE, related_name="contacts",blank=True, null=True)
 
     agency = models.ForeignKey(Agency, on_delete=models.CASCADE, related_name="contacts", blank=True, null=True)
+
+    def __str__(self) -> str:
+        return f"{self.full_name}{'' if not self.job_title else ', ' + self.job_title}"
 
     @staticmethod
     def get_agency_contact_from_str(agency_contact_str):
@@ -370,6 +351,12 @@ class InvestigatingAgencyData(models.Model):
 
     case_number = models.CharField(max_length=256, blank=True, null=True)
     date_reported = models.CharField(max_length=256, blank=True, null=True)
+
+    def __str__(self) -> str:
+        return f"\n * Agency: {self.agency}\n\
+        {f' * Case Number: {self.case_number}\n' if self.case_number else ''}\
+        {f' * Contact: {self.contact}\n' if self.contact else ''}\
+        {f' * Date Reported: {self.date_reported}' if self.date_reported else ''}"
 
     @staticmethod
     def create_investigating_agency_data(investigating_agency_data):
@@ -515,6 +502,17 @@ class TribalAssociation(models.Model):
     tribe = models.ForeignKey(Tribe, on_delete=models.CASCADE, related_name="associations", blank=True, null=True)
     is_enrolled = models.BooleanField(blank=True, null=True)
 
+    def __str__(self) -> str:
+        res = f" * Tribe Name: {self.tribe.name}\n"
+        if self.is_enrolled is None:
+            res += f" * Enrollment: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
+        else:
+            if self.is_enrolled:
+                res += f" * Enrollment: {InternalReprKeysConfig.STR_YES}\n"
+            else:
+                res += f" * Enrollment: {InternalReprKeysConfig.STR_NO}\n"
+        return res
+
 class SubjectDemographics(models.Model):
     current_min_age = models.FloatField(blank=True, null=True)
     current_max_age = models.FloatField(blank=True, null=True)
@@ -533,6 +531,72 @@ class SubjectDemographics(models.Model):
 
     tribal_affiliation = models.ForeignKey(TribalAffiliation, on_delete=models.CASCADE, related_name="subject_demographics", blank=True, null=True)
     tribal_associations = models.ManyToManyField(TribalAssociation, related_name="subject_demographics")
+
+    def __str__(self) -> str:
+        res = "\n\n>> |======|DEMOGRAPHICS|======| <<\n"
+        
+        if self.missing_min_age and self.missing_max_age:
+            if self.missing_min_age == self.missing_max_age:
+                res += f" > Missing Age: {self.missing_min_age}\n"
+            else:
+                res += f" > Missing Age: {self.missing_min_age} - {self.missing_max_age}\n"
+        
+        elif not self.missing_min_age and not self.missing_max_age:
+            res += f" > Missing Age: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
+        else:
+            res += f" > Missing Age: {self.missing_min_age if self.missing_min_age else self.missing_max_age}\n"
+
+        if self.current_min_age and self.current_max_age:
+            if self.current_min_age == self.current_max_age:
+                res += f" > Current Age: {self.current_min_age}\n"
+            else:
+                res += f" > Current Age: {self.current_min_age} - {self.current_max_age}\n"
+        
+        elif not self.current_min_age and not self.current_max_age:
+            res += f" > Current Age: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
+        else:
+            res += f" > Current Age: {self.current_min_age if self.current_min_age else self.current_max_age}\n"
+
+        if self.height_from_inches and self.height_to_inches:
+            res += f" > Height: {self.height_from_inches} - {self.height_to_inches} inches\n"
+        elif not self.height_from_inches and not self.height_to_inches:
+            res += f" > Height: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
+        else:
+            res += f" > Height: {self.height_from_inches if self.height_from_inches else self.height_to_inches} inches\n"
+        
+        if self.weight_from_lbs and self.weight_to_lbs:
+            res += f" > Weight: {self.weight_from_lbs} - {self.weight_to_lbs} lbs\n"
+        elif not self.weight_from_lbs and not self.weight_to_lbs:
+            res += f" > Weight: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
+        else:
+            res += f" > Weight: {self.weight_from_lbs if self.weight_from_lbs else self.weight_to_lbs} inches\n"
+
+        if not self.gender:
+            res += f" > Gender: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
+        else:
+            res += f" > Gender: {self.gender}\n"
+
+        if not self.primary_ethnicity:
+            res += f" > Primary Ethnicity: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
+        else:
+            res += f" > Primary Ethnicity: {self.primary_ethnicity}"
+        
+        if self.ethnicities.count() > 1:
+            res += " >> All Ethnicities <<\n"
+            for ethnicity in self.ethnicities.all():
+                res += f" * {ethnicity}"
+        
+        if not self.tribal_affiliation:
+            res += f" > Tribal Affiliation: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
+        else:
+            res += f" > Tribal Affiliation: {self.tribal_affiliation}\n"
+
+        if self.tribal_associations.count() > 0:
+            res += " >> Tribal Associations <<\n"
+            for tribe_association in self.tribal_associations.all():
+                res += f"---\n{tribe_association}---"
+        
+        return res  
 
     @staticmethod
     def create_subject_demographics(subject_demographics_data):
@@ -664,6 +728,24 @@ class SubjectDescription(models.Model):
     facial_hair_description = models.CharField(max_length=512, blank=True, null=True)
     eye_description = models.CharField(max_length=512, blank=True, null=True)
 
+    def __str__(self) -> str:
+        res = "\n\n>> |======|DESCRIPTION|======| <<\n"
+        res += f" > Hair Color: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.hair_color else self.hair_color}\n"
+        res += f" > Left Eye Color: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.left_eye_color else self.left_eye_color}\n"
+        res += f" > Right Eye Color: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.right_eye_color else self.right_eye_color}\n"
+        
+        res += f" > Head Hair Description: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.head_hair_description else self.head_hair_description}\n"
+        res += f" > Body Hair Description: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.body_hair_description else self.body_hair_description}\n"
+        res += f" > Facial Hair Description: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.facial_hair_description else self.facial_hair_description}\n"
+        res += f" > Eye Description: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.eye_description else self.eye_description}\n"
+
+        if self.distinctive_physical_features.count() > 0:
+            res += " >> Other Descriptive Features <<\n"
+            for feature in self.distinctive_physical_features.all():
+                res += f" * {feature.category.name} - {feature.description}\n"
+
+        return res
+
     @staticmethod
     def create_subject_description(**subject_description_data):
         physical_features = subject_description_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_PHYSICAL_FEATURES]
@@ -708,6 +790,14 @@ class SubjectIdentification(models.Model):
     
     middle_name = models.CharField(blank=True, null=True, max_length=256)
     nicknames = models.CharField(blank=True, null=True, max_length=1024)
+
+    def __str__(self) -> str:
+        res = "\n\n>> |======|IDENTIFICATION|======| <<\n"
+        res += f" > First Name: {self.first_name}\n"
+        res += f" > Middle Name: {InternalReprKeysConfig.STR_NONE if not self.middle_name else self.middle_name}\n"
+        res += f" > Last Name: {self.last_name}\n"
+        res += f" > Nicknames: {InternalReprKeysConfig.STR_NONE if not self.nicknames else self.nicknames}\n"
+        return res
     
     @staticmethod
     def create_subject_identification(subject_identification_data):
@@ -856,6 +946,34 @@ class DescriptiveItemCategory(models.Model):
             return new_category
 
 class SubjectRelatedItems(models.Model):
+    def __str__(self) -> str:
+        res = ""
+        if self.clothing_and_accessories.count() > 0:
+            res += "\n\n>> |======|CLOTHING AND ACCESSORIES|======| <<\n"
+            for clothing_or_accessory in self.clothing_and_accessories.all():
+                res += f"* {clothing_or_accessory.category.name} - {clothing_or_accessory.description}\n"
+        
+        if self.vehicles_info.count() > 0:
+            res += "\n\n>> |======|VEHICLES|======| <<\n"
+            for vehicle_info in self.vehicles_info.all():
+                res += "---\n"
+                res += f" > Tag Number: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.tag_number else vehicle_info.tag_number}\n"
+                res += f" > Tag State: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.tag_state else vehicle_info.tag_state}\n"
+                res += f" > Tag Year: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.vehicle_year else vehicle_info.vehicle_year}\n"
+                res += f" > Tag Expiration Year: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.tag_expiration_year else vehicle_info.tag_expiration_year}\n"
+
+                res += f" > Make: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.vehicle_make else vehicle_info.vehicle_make}\n"
+                res += f" > Model: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.vehicle_model else vehicle_info.vehicle_model}\n"
+                res += f" > Style: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.vehicle_style else vehicle_info.vehicle_style}\n"
+                res += f" > Color: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.vehicle_color else vehicle_info.vehicle_year}\n"
+
+                if vehicle_info.comment:
+                    res += f" * {vehicle_info.comment}\n"
+
+                res += "---"
+        return res
+                
+    
     @staticmethod
     def create_subject_related_items(**subject_related_items_data):
         related_items = SubjectRelatedItems()
@@ -916,7 +1034,46 @@ class VehicleInformation(models.Model):
 
 ######============================######
 
+#####============================INTERNAL MISC ENUMS============================######
 
+class CaseType(models.TextChoices):
+    MP = "Missing Persons Case"
+    UID = "Unidentified Body Case"
+
+    @classmethod
+    def choices(cls):
+        return [(item.name, item.value) for item in cls]
+
+
+class SourceType(models.TextChoices):
+    GOV_BACKED = "Government Backed"
+    PRIVATE = "Private"
+
+class Source(models.Model):
+    name = models.CharField(max_length=64)
+    source_type = models.CharField(choices=SourceType.choices, max_length=256, blank=True, null=True)
+
+    def __str__(self) -> str:
+        return self.name
+
+    @staticmethod
+    def get_src(src_name):
+        source = Source.objects.filter(name=src_name)
+        if source.count() > 1:
+            raise ValueError("Duplicate sources in the database.")
+        elif source.count() == 0:
+            return None
+        return source.first()
+
+class CaseSource(models.Model):
+    source = models.ForeignKey(Source, on_delete=models.CASCADE, related_name="related_cases")
+    link = models.CharField(max_length=4096)
+
+    def __str__(self) -> str:
+        return f" * {self.source} - {self.link}"
+
+
+###============================###
 
 ######============================CASES============================######
 
@@ -976,11 +1133,16 @@ class PrimaryResidenceOnTribalLand(models.Model):
 
 class MPCase(models.Model):
     
+    case_type = models.CharField(max_length=64, choices=CaseType.choices, blank=True, null=True, editable=False, default=CaseType.MP)
+    case_id = models.CharField(max_length=64, blank=True, null=True, default=f"C_MP{CaseStats.GLOBAL_CASE_COUNT}")
+    
     namus_id = models.CharField(max_length=256)
     namus_id_formatted = models.CharField(max_length=256)
     ncmec_number = models.CharField(max_length=256, blank=True, null=True)
     
-    source_link = models.CharField(max_length=2048, blank=True, null=True)
+    primary_source = models.ForeignKey(CaseSource, on_delete=models.CASCADE, related_name="cases_primary")
+    secondary_sources = models.ManyToManyField(CaseSource, related_name="cases_secondary")
+
     
     internal_created = models.DateField(auto_now=True)
     case_created = models.DateField()
@@ -998,12 +1160,56 @@ class MPCase(models.Model):
     circumstances_of_disappearance = models.TextField(max_length=10000, blank=True, null=True)
     
     is_resolved = models.BooleanField(blank=True, null=True)
+    is_archived = models.BooleanField(blank=True, default=False)
     
     primary_investigating_agency = models.ForeignKey(InvestigatingAgencyData, on_delete=models.CASCADE, related_name="cases_primary", blank=True, null=True)
     secondary_investigating_agencies = models.ManyToManyField(InvestigatingAgencyData, related_name="cases_secondary", blank=True)
 
+    def __str__(self) -> str:
+        res = "***---------------------------------------***\n"
+        res += f"{self.case_type} - {self.case_id} ({self.primary_source})\n"
+        res += "***---------------------------------------***\n"
+        res += "\n\n>> |======|META|======| <<\n"
+        res += f" > NamUs Id: {self.namus_id_formatted}\n"
+        if self.ncmec_number:
+            res += f" > NCMEC Number: {self.namus_id_formatted}\n"
+        res += f"Case Created (Internal) - {self.internal_created} | Case Created(Source) - {self.case_created}\n"
+        res += f"Case Last Modified(Source) - {self.case_last_modified}\n"
+        res += f"Resolved: {self.is_resolved} | Archived: {self.is_archived}"
+        
+        res += self.identification
+        res += self.demographics
+        res += self.related_items
+        res += self.last_known_location
+
+        res += f"\n\n>> |======|CIRCUMSTANCES OF DISAPPEARANCE|======| <<\n"
+        res += f"* {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.circumstances_of_disappearance else self.circumstances_of_disappearance}\n"
+        res += f" > Primary Residence On Tribal Land: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.primary_residence_on_tribal_land else self.primary_residence_on_tribal_land}\n"
+        res += f" > Missing From Tribal Land: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.missing_from_tribal_land else self.missing_from_tribal_land}\n"
+
+        res += f"\n\n>> |======|AGENCIES|======| <<\n"
+        res += f" >> Primary Investigating Agency <<\n"
+        res += self.primary_investigating_agency
+        if self.secondary_investigating_agencies.count() > 0:
+            res += f" >> Secondary Investigating Agencies <<\n"
+            for secondary_agency in self.secondary_investigating_agencies.all():
+                res += "---\n"
+                res += secondary_agency
+                res += "---\n"
+        
+        res += f"\n\n>> |======|SOURCES|======| <<\n"
+        res += f" > Primary Source: {self.primary_source}\n"
+        if self.secondary_sources.count() > 0:
+            res += ">> Secondary Sources <<\n"
+            for secondary_source in self.secondary_sources.all():
+                res += f" * {secondary_source}\n"
+            
+
+
     @staticmethod 
     def create_mp_case(case_data):
+        CaseStats.GLOBAL_CASE_COUNT += 1
+        
         subject_identification_data = case_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_IDENTIFICATION]
         subject_demographics_data = case_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_DEMOGRAPHICS]
 
@@ -1059,6 +1265,7 @@ class MPCase(models.Model):
         for investigating_agency_data in case_data[InternalReprKeysConfig.CASE_DATA_INVESTIGATING_AGENCIES_SECONDARY]:
             data_object = InvestigatingAgencyData.create_investigating_agency_data(investigating_agency_data)
             case.secondary_investigating_agencies.add(data_object)
+        
 
 ###============================###
 
