@@ -1,10 +1,14 @@
 import datetime
-from internal_repr.internal_repr_config import InternalReprKeysConfig
+from internal_repr.native.case_data_keys import InternalReprKeysConfig
+from internal_repr.models import Source
 
-MP_URL_BASE = "https://www.namus.gov/MissingPersons/Case#/{NAMUS_ID}"
+BASE_URL =  "https://www.namus.gov"
+MP_URL_BASE = BASE_URL + "/MissingPersons/Case#/{NAMUS_ID}"
+
 
 def filter_mp_json_for_internal_repr(json):
     case_data = {}
+    case_data[InternalReprKeysConfig.SOURCE] = Source.get_src("namus")
     case_data[InternalReprKeysConfig.SOURCE_LINK] = MP_URL_BASE.format(NAMUS_ID=json["id"])
     case_data[InternalReprKeysConfig.NAMUS_ID] = json["id"]
     case_data[InternalReprKeysConfig.NAMUS_ID_FORMATTED] = json["idFormatted"]
@@ -16,12 +20,32 @@ def filter_mp_json_for_internal_repr(json):
     case_data[InternalReprKeysConfig.CIRCUMSTANCES_OF_DISAPPEARANCE] = json.get("circumstances", {}).get("circumstancesOfDisappearance")
     case_data[InternalReprKeysConfig.CASE_RESOLVED] = json.get("caseIsResolved")
 
+    case_data[InternalReprKeysConfig.DEFAULT_IMAGE_POSTER] = BASE_URL + json.get("hrefDefaultImagePoster")
+    case_data[InternalReprKeysConfig.DEFAULT_IMAGE_THUMBNAIL] = BASE_URL + json.get("hrefDefaultImageThumbnail")
+    case_data[InternalReprKeysConfig.OTHER_IMAGES] = []
+    for image in json.get("images"):
+        case_data[InternalReprKeysConfig.OTHER_IMAGES].append(
+            {
+                InternalReprKeysConfig.IMAGE_POSTER: {
+                    InternalReprKeysConfig.RES_HEIGHT: image.get("files", {}).get("original", {}).get("height"),
+                    InternalReprKeysConfig.RES_WIDTH: image.get("files", {}).get("original", {}).get("width"),
+                    InternalReprKeysConfig.HREF: BASE_URL + image.get("files", {}).get("original", {}).get("href"),
+                },
+                InternalReprKeysConfig.IMAGE_THUMBNAIL: {
+                    InternalReprKeysConfig.RES_HEIGHT: image.get("files", {}).get("thumbnail", {}).get("height"),
+                    InternalReprKeysConfig.RES_WIDTH: image.get("files", {}).get("thumbnail", {}).get("width"),
+                    InternalReprKeysConfig.HREF: BASE_URL + image.get("files", {}).get("thumbnail", {}).get("href"),
+                },
+                InternalReprKeysConfig.STR_DOWNLOAD: BASE_URL + image.get("hrefDownload")
+            }
+        )
+
     primary_investigating_agency_name = json.get("primaryInvestigatingAgency", {}).get("name")
     case_data[InternalReprKeysConfig.CASE_DATA_INVESTIGATING_AGENCY_PRIMARY] = None
     case_data[InternalReprKeysConfig.CASE_DATA_INVESTIGATING_AGENCIES_SECONDARY] = []
     
     for investigating_agency_data in json.get("investigatingAgencies"):
-        contact_info = investigating_agency_data.get("selection", {}).get("contact", {})
+        contact_info = investigating_agency_data.get("selection", {}).get("contact")
         if investigating_agency_data.get("name") == primary_investigating_agency_name and primary_investigating_agency_name != None:
             case_data[InternalReprKeysConfig.CASE_DATA_INVESTIGATING_AGENCY_PRIMARY] = {
                 InternalReprKeysConfig.STR_NAME: primary_investigating_agency_name,
@@ -36,14 +60,14 @@ def filter_mp_json_for_internal_repr(json):
                 InternalReprKeysConfig.CASE_NUMBER: investigating_agency_data.get("caseNumber"),
                 InternalReprKeysConfig.DT_CASE_REPORTED: None if not investigating_agency_data.get("dateReported") else datetime.datetime.strptime(investigating_agency_data.get("dateReported"), "%Y-%m-%d"),
                 
-                InternalReprKeysConfig.AGENCY_CONTACT: None if contact_info == {} else {
+                InternalReprKeysConfig.AGENCY_CONTACT: None if not contact_info else {
                     InternalReprKeysConfig.FIRST_NAME: contact_info.get("firstName"),
                     InternalReprKeysConfig.LAST_NAME: contact_info.get("lastName"),
                     InternalReprKeysConfig.AGENCY_CONTACT_JT: contact_info.get("jobTitle"),
                     InternalReprKeysConfig.AGENCY_CONTACT_JR: contact_info.get("role")
                 }
             }
-        else:
+        elif investigating_agency_data.get("name") != None:
             case_data[InternalReprKeysConfig.CASE_DATA_INVESTIGATING_AGENCIES_SECONDARY].append(
                 {
                     InternalReprKeysConfig.STR_NAME: investigating_agency_data.get("name"),
@@ -56,9 +80,9 @@ def filter_mp_json_for_internal_repr(json):
                     InternalReprKeysConfig.JURISDICTION: investigating_agency_data.get("selection", {}).get("agency", {}).get("jurisdiction", {}).get("name"),
                     InternalReprKeysConfig.AGENCY_TYPE: investigating_agency_data.get("selection", {}).get("agency", {}).get("agencyType", {}).get("name"),
                     InternalReprKeysConfig.CASE_NUMBER: investigating_agency_data.get("caseNumber"),
-                    InternalReprKeysConfig.DT_CASE_REPORTED: investigating_agency_data.get("dateReported"),
+                    InternalReprKeysConfig.DT_CASE_REPORTED: None if not investigating_agency_data.get("dateReported") else datetime.datetime.strptime(investigating_agency_data.get("dateReported"), "%Y-%m-%d"),
                     
-                    InternalReprKeysConfig.DT_CASE_REPORTED: None if contact_info == {} else {
+                    InternalReprKeysConfig.AGENCY_CONTACT: None if not contact_info else {
                         InternalReprKeysConfig.FIRST_NAME: contact_info.get("firstName"),
                         InternalReprKeysConfig.LAST_NAME: contact_info.get("lastName"),
                         InternalReprKeysConfig.AGENCY_CONTACT_JT: contact_info.get("jobTitle"),

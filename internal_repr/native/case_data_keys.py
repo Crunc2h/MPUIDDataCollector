@@ -13,7 +13,8 @@ class InternalReprKeysConfig:
     CASE_RESOLVED = "is_resolved"
     CASE_NUMBER = "case_number"
     
-    SOURCE_LINK = "source_link" 
+    SOURCE_LINK = "source_link"
+    SOURCE = "source" 
     
     DT_SOURCE_CREATED = "dt_sourcecreated"
     DT_SOURCE_LAST_MODIFIED = "dt_source_last_modified"
@@ -27,6 +28,17 @@ class InternalReprKeysConfig:
     STR_NO = "No"
     STR_NOT_PROVIDED = "Not Provided"
     STR_NONE = "-"
+    STR_DOWNLOAD = "download"
+
+    DEFAULT_IMAGE_POSTER = "def_img_poster"
+    DEFAULT_IMAGE_THUMBNAIL = "def_img_thumbnail"
+    OTHER_IMAGES = "img_other"
+    IMAGE_POSTER = "img_poster"
+    IMAGE_THUMBNAIL = "img_thumbnail"
+    IMAGE = "img"
+    RES_HEIGHT = "height"
+    RES_WIDTH = "width"
+    HREF = "href"
 
 
     FIRST_NAME = "first_name"

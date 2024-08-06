@@ -2,13 +2,12 @@ from django.db import models
 from .native.case_data_keys import InternalReprKeysConfig
 from .native.case_stats import CaseStats
 
-
 ######============================MISC DATA TYPES============================######
 
 ###==============LOCATION DATA==============###
 
 class State(models.Model):
-    name = models.CharField(max_length=64, blank=True, null=True)
+    name = models.CharField(max_length=64)
 
     def save(self, *args, **kwargs):
         self.name = self.name.title()
@@ -35,7 +34,7 @@ class State(models.Model):
             return new_state
         
 class County(models.Model):
-    name = models.CharField(max_length=64, blank=True, null=True)
+    name = models.CharField(max_length=64)
 
     def save(self, *args, **kwargs):
         self.name = self.name.title()
@@ -62,7 +61,7 @@ class County(models.Model):
             return new_county
         
 class City(models.Model):
-    name = models.CharField(max_length=64, blank=True, null=True)
+    name = models.CharField(max_length=64)
 
     def save(self, *args, **kwargs):
         self.name = self.name.title()
@@ -104,13 +103,10 @@ class Location(models.Model):
     lon = models.FloatField(blank=True, null=True)
 
     def __str__(self) -> str:
-        return self.address
+        return f"{self.state}, {self.county}"
 
     def save(self, *args, **kwargs):
-        self.address = f"{'' if not self.state else self.state + ', '}\
-                    {'' if not self.county else self.county + ', '}\
-                    {'' if not self.city else self.city + ', '}\
-                    {'' if not self.street else self.street}"
+        address = str(self.state) + ' ' + str(self.county) 
         return super().save()
 
 class Sighting(models.Model):
@@ -150,7 +146,7 @@ class Sighting(models.Model):
 ###==============AGENCY RELATED==============###
 
 class AgencyType(models.Model):
-    name = models.CharField(max_length=64, blank=True, null=True)
+    name = models.CharField(max_length=64)
 
     def save(self, *args, **kwargs):
         self.name = self.name.title()
@@ -176,7 +172,7 @@ class AgencyType(models.Model):
             return new_agency_type
 
 class Jurisdiction(models.Model):
-    name = models.CharField(max_length=64, blank=True, null=True)
+    name = models.CharField(max_length=64)
 
     def save(self, *args, **kwargs):
         self.name = self.name.title()
@@ -202,7 +198,7 @@ class Jurisdiction(models.Model):
             return new_jurisdiction
 
 class AgencyContactJobTitle(models.Model):
-    name = models.CharField(max_length=64, blank=True, null=True)
+    name = models.CharField(max_length=64)
 
     def save(self, *args, **kwargs):
         self.name = self.name.title()
@@ -228,7 +224,7 @@ class AgencyContactJobTitle(models.Model):
             return new_job_title
 
 class AgencyContactRole(models.Model):
-    name = models.CharField(max_length=64, blank=True, null=True)
+    name = models.CharField(max_length=64)
 
     def save(self, *args, **kwargs):
         self.name = self.name.title()
@@ -255,7 +251,7 @@ class AgencyContactRole(models.Model):
             return new_role
 
 class Agency(models.Model):
-    name = models.CharField(max_length=256, blank=True, null=True)
+    name = models.CharField(max_length=256)
     phone = models.CharField(max_length=256, blank=True, null=True)
 
     jurisdiction = models.CharField(max_length=256, blank=True, null=True)
@@ -283,7 +279,7 @@ class Agency(models.Model):
     @staticmethod
     def create_agency(agency_data):
         agency = Agency(
-            name = None if not agency_data[InternalReprKeysConfig.STR_NAME] else agency_data[InternalReprKeysConfig.STR_NAME].title(),
+            name = agency_data[InternalReprKeysConfig.STR_NAME].title(),
             phone = None if not agency_data[InternalReprKeysConfig.PHONE] else agency_data[InternalReprKeysConfig.PHONE].title(),
 
             jurisdiction = Jurisdiction.get_jurisdiction_from_str(agency_data[InternalReprKeysConfig.JURISDICTION]),
@@ -307,9 +303,9 @@ class Agency(models.Model):
         return agency
 
 class AgencyContact(models.Model):
-    first_name = models.CharField(max_length=256, blank=True, null=True)
-    last_name = models.CharField(max_length=256, blank=True, null=True)
-    full_name = models.CharField(max_length=512, blank=True, null=True)
+    first_name = models.CharField(max_length=256)
+    last_name = models.CharField(max_length=256)
+    full_name = models.CharField(max_length=512)
     
     job_title = models.ForeignKey(AgencyContactJobTitle, on_delete=models.CASCADE, related_name="contacts",blank=True, null=True)
     role = models.ForeignKey(AgencyContactRole, on_delete=models.CASCADE, related_name="contacts",blank=True, null=True)
@@ -317,7 +313,7 @@ class AgencyContact(models.Model):
     agency = models.ForeignKey(Agency, on_delete=models.CASCADE, related_name="contacts", blank=True, null=True)
 
     def __str__(self) -> str:
-        return f"{self.full_name}{'' if not self.job_title else ', ' + self.job_title}"
+        return f"{self.full_name}{'' if not self.job_title else ', ' + str(self.job_title)}"
 
     @staticmethod
     def get_agency_contact_from_str(agency_contact_str):
@@ -346,31 +342,24 @@ class AgencyContact(models.Model):
         return contact
 
 class InvestigatingAgencyData(models.Model):
-    agency = models.ForeignKey(Agency, on_delete=models.CASCADE, related_name="investigations", blank=True, null=True)
-    contact = models.ForeignKey(AgencyContact, on_delete=models.CASCADE, related_name="investigations", blank=True, null=True)
+    agency = models.ForeignKey(Agency, on_delete=models.CASCADE, related_name="investigations")
+    contact = models.ForeignKey(AgencyContact, on_delete=models.CASCADE, related_name="investigations", null=True)
 
-    case_number = models.CharField(max_length=256, blank=True, null=True)
-    date_reported = models.CharField(max_length=256, blank=True, null=True)
+    case_number = models.CharField(max_length=256, null=True)
+    date_reported = models.DateField(max_length=256, null=True)
 
     def __str__(self) -> str:
-        return f"\n * Agency: {self.agency}\n\
-        {f' * Case Number: {self.case_number}\n' if self.case_number else ''}\
-        {f' * Contact: {self.contact}\n' if self.contact else ''}\
-        {f' * Date Reported: {self.date_reported}' if self.date_reported else ''}"
-
+        res = f"\n * Agency: {str(self.agency)}\n"
+        res += f" * Case Number: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.case_number else self.case_number}\n"
+        res += f" * Contact: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.contact else str(self.contact)}\n"
+        res += f" * Date Reported: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.date_reported else self.date_reported}\n"
+        return res
+    
     @staticmethod
     def create_investigating_agency_data(investigating_agency_data):
-        data = InvestigatingAgencyData(
-            case_number = investigating_agency_data[InternalReprKeysConfig.CASE_NUMBER],
-            date_reported = investigating_agency_data[InternalReprKeysConfig.DT_CASE_REPORTED]
-        )
-        data.save()
-
         agency = Agency.get_agency_from_str(investigating_agency_data[InternalReprKeysConfig.STR_NAME])
         if not agency:
             agency = Agency.create_agency(investigating_agency_data)
-        
-        data.agency = agency
         
         if investigating_agency_data[InternalReprKeysConfig.AGENCY_CONTACT]:
             contact = AgencyContact.get_agency_contact_from_str(
@@ -379,9 +368,18 @@ class InvestigatingAgencyData(models.Model):
                 )
             if not contact:
                 contact = AgencyContact.create_contact(investigating_agency_data[InternalReprKeysConfig.AGENCY_CONTACT])
-        
             contact.agency = agency
-            data.contact = contact
+        else:
+            contact = None
+
+        
+        data = InvestigatingAgencyData(
+            agency = agency,
+            contact = contact,
+            case_number = investigating_agency_data[InternalReprKeysConfig.CASE_NUMBER],
+            date_reported = investigating_agency_data[InternalReprKeysConfig.DT_CASE_REPORTED]
+        )
+        data.save()
         return data
 
 ###============================###
@@ -395,7 +393,7 @@ class InvestigatingAgencyData(models.Model):
 ###==============SUBJECT DEMOGRAPHICS==============###
 
 class Gender(models.Model):
-    name = models.CharField(max_length=64, blank=True, null=True)
+    name = models.CharField(max_length=64)
 
     def save(self, *args, **kwargs):
         self.name = self.name.title()
@@ -421,7 +419,7 @@ class Gender(models.Model):
             return new_gender
         
 class Ethnicity(models.Model):
-    name = models.CharField(max_length=64, blank=True, null=True)
+    name = models.CharField(max_length=64)
 
     def save(self, *args, **kwargs):
         self.name = self.name.title()
@@ -447,7 +445,7 @@ class Ethnicity(models.Model):
             return new_ethnicity
              
 class TribalAffiliation(models.Model):
-    name = models.CharField(max_length=64, blank=True, null=True)
+    name = models.CharField(max_length=64)
 
     def save(self, *args, **kwargs):
         self.name = self.name.title()
@@ -473,7 +471,7 @@ class TribalAffiliation(models.Model):
             return new_affiliation
         
 class Tribe(models.Model):
-    name = models.CharField(max_length=64, blank=True, null=True)
+    name = models.CharField(max_length=64)
 
     def save(self, *args, **kwargs):
         self.name = self.name.title()
@@ -499,8 +497,8 @@ class Tribe(models.Model):
             return new_tribe
 
 class TribalAssociation(models.Model):
-    tribe = models.ForeignKey(Tribe, on_delete=models.CASCADE, related_name="associations", blank=True, null=True)
-    is_enrolled = models.BooleanField(blank=True, null=True)
+    tribe = models.ForeignKey(Tribe, on_delete=models.CASCADE, related_name="associations")
+    is_enrolled = models.BooleanField(null=True)
 
     def __str__(self) -> str:
         res = f" * Tribe Name: {self.tribe.name}\n"
@@ -579,22 +577,22 @@ class SubjectDemographics(models.Model):
         if not self.primary_ethnicity:
             res += f" > Primary Ethnicity: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
         else:
-            res += f" > Primary Ethnicity: {self.primary_ethnicity}"
+            res += f" > Primary Ethnicity: {str(self.primary_ethnicity)}\n"
         
         if self.ethnicities.count() > 1:
             res += " >> All Ethnicities <<\n"
             for ethnicity in self.ethnicities.all():
-                res += f" * {ethnicity}"
+                res += f" * {ethnicity}\n"
         
         if not self.tribal_affiliation:
             res += f" > Tribal Affiliation: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
         else:
-            res += f" > Tribal Affiliation: {self.tribal_affiliation}\n"
+            res += f" > Tribal Affiliation: {str(self.tribal_affiliation)}\n"
 
         if self.tribal_associations.count() > 0:
             res += " >> Tribal Associations <<\n"
             for tribe_association in self.tribal_associations.all():
-                res += f"---\n{tribe_association}---"
+                res += f"---\n{str(tribe_association)}---"
         
         return res  
 
@@ -640,7 +638,7 @@ class SubjectDemographics(models.Model):
 ###==============SUBJECT DESCRIPTION==============###
 
 class EyeColor(models.Model):
-    name = models.CharField(max_length=64, blank=True, null=True)
+    name = models.CharField(max_length=64)
 
     def save(self, *args, **kwargs):
         self.name = self.name.title()
@@ -666,7 +664,7 @@ class EyeColor(models.Model):
             return new_color
 
 class HairColor(models.Model):
-    name = models.CharField(max_length=64, blank=True, null=True)
+    name = models.CharField(max_length=64)
 
     def save(self, *args, **kwargs):
         self.name = self.name.title()
@@ -692,7 +690,7 @@ class HairColor(models.Model):
             return new_color
 
 class DescriptiveFeatureCategory(models.Model):
-    name = models.CharField(max_length=64, blank=True, null=True)
+    name = models.CharField(max_length=64)
 
     def save(self, *args, **kwargs):
         self.name = self.name.title()
@@ -747,7 +745,7 @@ class SubjectDescription(models.Model):
         return res
 
     @staticmethod
-    def create_subject_description(**subject_description_data):
+    def create_subject_description(subject_description_data):
         physical_features = subject_description_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_PHYSICAL_FEATURES]
         
         description = SubjectDescription(
@@ -801,6 +799,7 @@ class SubjectIdentification(models.Model):
     
     @staticmethod
     def create_subject_identification(subject_identification_data):
+        subject_identification_data = subject_identification_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_IDENTIFICATION]
         identification = SubjectIdentification(
             first_name = subject_identification_data[InternalReprKeysConfig.FIRST_NAME],
             last_name = subject_identification_data[InternalReprKeysConfig.LAST_NAME],
@@ -816,7 +815,7 @@ class SubjectIdentification(models.Model):
 ###==============SUBJECT RELATED ITEMS==============###
 
 class VehicleColor(models.Model):
-    name = models.CharField(max_length=64, blank=True, null=True)
+    name = models.CharField(max_length=64)
 
     def save(self, *args, **kwargs):
         self.name = self.name.title()
@@ -842,7 +841,7 @@ class VehicleColor(models.Model):
             return new_color  
 
 class VehicleMake(models.Model):
-    name = models.CharField(max_length=64, blank=True, null=True)
+    name = models.CharField(max_length=64)
 
     def save(self, *args, **kwargs):
         self.name = self.name.title()
@@ -868,7 +867,7 @@ class VehicleMake(models.Model):
             return new_make
         
 class VehicleModel(models.Model):
-    name = models.CharField(max_length=64, blank=True, null=True)
+    name = models.CharField(max_length=64)
 
     def save(self, *args, **kwargs):
         self.name = self.name.title()
@@ -894,7 +893,7 @@ class VehicleModel(models.Model):
             return new_model
         
 class VehicleStyle(models.Model):
-    name = models.CharField(max_length=64, blank=True, null=True)
+    name = models.CharField(max_length=64)
 
     def save(self, *args, **kwargs):
         self.name = self.name.title()
@@ -920,7 +919,7 @@ class VehicleStyle(models.Model):
             return new_style
 
 class DescriptiveItemCategory(models.Model):
-    name = models.CharField(max_length=64, blank=True, null=True)
+    name = models.CharField(max_length=64)
 
     def save(self, *args, **kwargs):
         self.name = self.name.title()
@@ -975,7 +974,7 @@ class SubjectRelatedItems(models.Model):
                 
     
     @staticmethod
-    def create_subject_related_items(**subject_related_items_data):
+    def create_subject_related_items(subject_related_items_data):
         related_items = SubjectRelatedItems()
         related_items.save()
 
@@ -997,7 +996,7 @@ class SubjectRelatedItems(models.Model):
                 tag_number = vehicle_info[InternalReprKeysConfig.VEHICLE_TAG_NUM],
                 comment = vehicle_info[InternalReprKeysConfig.VEHICLE_COMMENT],
                 
-                vehicle_make = VehicleMake.get_vehicle_make_from_str(vehicle_info[VehicleMake]),
+                vehicle_make = VehicleMake.get_vehicle_make_from_str(vehicle_info[InternalReprKeysConfig.VEHICLE_MAKE]),
                 vehicle_model = VehicleModel.get_vehicle_model_from_str(vehicle_info[InternalReprKeysConfig.VEHICLE_MODEL]),
                 vehicle_style = VehicleStyle.get_vehicle_style_from_str(vehicle_info[InternalReprKeysConfig.VEHICLE_STYLE]),
                 vehicle_color = VehicleColor.get_vehicle_color_from_str(vehicle_info[InternalReprKeysConfig.VEHICLE_COLOR]),
@@ -1044,20 +1043,24 @@ class CaseType(models.TextChoices):
     def choices(cls):
         return [(item.name, item.value) for item in cls]
 
-
 class SourceType(models.TextChoices):
     GOV_BACKED = "Government Backed"
     PRIVATE = "Private"
 
 class Source(models.Model):
     name = models.CharField(max_length=64)
-    source_type = models.CharField(choices=SourceType.choices, max_length=256, blank=True, null=True)
+    source_type = models.CharField(choices=SourceType.choices, max_length=256)
+
+    def save(self, *args, **kwargs):
+        self.name = self.name.lower()
+        return super().save()
 
     def __str__(self) -> str:
         return self.name
-
+    
     @staticmethod
     def get_src(src_name):
+        src_name = src_name.lower()
         source = Source.objects.filter(name=src_name)
         if source.count() > 1:
             raise ValueError("Duplicate sources in the database.")
@@ -1072,6 +1075,51 @@ class CaseSource(models.Model):
     def __str__(self) -> str:
         return f" * {self.source} - {self.link}"
 
+class Image(models.Model):
+    poster_href = models.CharField(max_length=4096)
+    thumbnail_href = models.CharField(max_length=4096)
+    file_path = models.CharField(max_length=512, blank=True, default=InternalReprKeysConfig.STR_NONE)
+    
+    height_poster = models.IntegerField(blank=True, null=True)
+    width_poster = models.IntegerField(blank=True, null=True)
+    height_thumbnail = models.IntegerField(blank=True, null=True)
+    width_thumbnail = models.IntegerField(blank=True, null=True)
+    
+    download_link = models.CharField(max_length=4096, blank=True, null=True)
+
+class CaseImages(models.Model):
+    default_image = models.ForeignKey(Image, on_delete=models.CASCADE, related_name="case_images_default")
+    other_images = models.ManyToManyField(Image, related_name="case_images_other")
+
+    @staticmethod
+    def create_case_images(case_images_data):
+        
+
+        default_image = Image(
+            poster_href = case_images_data[InternalReprKeysConfig.DEFAULT_IMAGE_POSTER],
+            thumbnail_href = case_images_data[InternalReprKeysConfig.DEFAULT_IMAGE_THUMBNAIL]
+        )
+        default_image.save()
+
+        case_images = CaseImages(default_image=default_image)
+        case_images.save()
+
+        for image in case_images_data[InternalReprKeysConfig.OTHER_IMAGES]:
+            image_obj = Image(
+                poster_href = image[InternalReprKeysConfig.IMAGE_POSTER][InternalReprKeysConfig.HREF],
+                thumbnail_href = image[InternalReprKeysConfig.IMAGE_POSTER][InternalReprKeysConfig.HREF],
+                download_link = image[InternalReprKeysConfig.STR_DOWNLOAD],
+                height_poster = image[InternalReprKeysConfig.IMAGE_POSTER][InternalReprKeysConfig.RES_HEIGHT],
+                width_poster = image[InternalReprKeysConfig.IMAGE_POSTER][InternalReprKeysConfig.RES_WIDTH],
+                height_thumbnail = image[InternalReprKeysConfig.IMAGE_THUMBNAIL][InternalReprKeysConfig.RES_HEIGHT],
+                width_thumbnail = image[InternalReprKeysConfig.IMAGE_THUMBNAIL][InternalReprKeysConfig.RES_WIDTH]
+            )
+            image_obj.save()
+            case_images.other_images.add(image_obj)
+        
+        return case_images
+
+
 
 ###============================###
 
@@ -1080,7 +1128,7 @@ class CaseSource(models.Model):
 ###==============MPCASE==============###
 
 class MissingFromTribalLand(models.Model):
-    name = models.CharField(max_length=64, blank=True, null=True)
+    name = models.CharField(max_length=64)
 
     def save(self, *args, **kwargs):
         self.name = self.name.title()
@@ -1106,7 +1154,7 @@ class MissingFromTribalLand(models.Model):
             return new_mftbland
         
 class PrimaryResidenceOnTribalLand(models.Model):
-    name = models.CharField(max_length=64, blank=True, null=True)
+    name = models.CharField(max_length=64)
 
     def save(self, *args, **kwargs):
         self.name = self.name.title()
@@ -1133,68 +1181,70 @@ class PrimaryResidenceOnTribalLand(models.Model):
 
 class MPCase(models.Model):
     
-    case_type = models.CharField(max_length=64, choices=CaseType.choices, blank=True, null=True, editable=False, default=CaseType.MP)
-    case_id = models.CharField(max_length=64, blank=True, null=True, default=f"C_MP{CaseStats.GLOBAL_CASE_COUNT}")
+    case_type = models.CharField(max_length=64, choices=CaseType.choices, blank=True, editable=False, default=CaseType.MP)
+    case_id = models.CharField(max_length=64, blank=True, default=f"C_MP{CaseStats.GLOBAL_CASE_COUNT}")
+    case_images = models.ForeignKey(CaseImages, on_delete=models.CASCADE, related_name="case")
+    case_internal_created = models.DateField(auto_now=True)
+    case_created = models.DateField()
+    case_last_modified = models.DateField()
     
     namus_id = models.CharField(max_length=256)
     namus_id_formatted = models.CharField(max_length=256)
-    ncmec_number = models.CharField(max_length=256, blank=True, null=True)
+    ncmec_number = models.CharField(max_length=256, null=True)
     
     primary_source = models.ForeignKey(CaseSource, on_delete=models.CASCADE, related_name="cases_primary")
     secondary_sources = models.ManyToManyField(CaseSource, related_name="cases_secondary")
-
     
-    internal_created = models.DateField(auto_now=True)
-    case_created = models.DateField()
-    case_last_modified = models.DateField()
-
     identification = models.OneToOneField(SubjectIdentification, on_delete=models.CASCADE, related_name="case")
     demographics = models.OneToOneField(SubjectDemographics, on_delete=models.CASCADE, related_name="case")
     description = models.OneToOneField(SubjectDescription, on_delete=models.CASCADE, related_name="case")
     related_items = models.OneToOneField(SubjectRelatedItems, on_delete=models.CASCADE, related_name="case")
     last_known_location = models.ForeignKey(Sighting, on_delete=models.CASCADE, related_name="cases")
 
-    primary_residence_on_tribal_land = models.ForeignKey(PrimaryResidenceOnTribalLand, on_delete=models.CASCADE, related_name="cases", blank=True, null=True)
-    missing_from_tribal_land = models.ForeignKey(MissingFromTribalLand, on_delete=models.CASCADE, related_name="cases", blank=True, null=True)
+    primary_residence_on_tribal_land = models.ForeignKey(PrimaryResidenceOnTribalLand, on_delete=models.CASCADE, related_name="cases", null=True)
+    missing_from_tribal_land = models.ForeignKey(MissingFromTribalLand, on_delete=models.CASCADE, related_name="cases", null=True)
 
-    circumstances_of_disappearance = models.TextField(max_length=10000, blank=True, null=True)
+    circumstances_of_disappearance = models.TextField(max_length=10000, null=True)
     
-    is_resolved = models.BooleanField(blank=True, null=True)
+    is_resolved = models.BooleanField(null=True)
     is_archived = models.BooleanField(blank=True, default=False)
     
-    primary_investigating_agency = models.ForeignKey(InvestigatingAgencyData, on_delete=models.CASCADE, related_name="cases_primary", blank=True, null=True)
-    secondary_investigating_agencies = models.ManyToManyField(InvestigatingAgencyData, related_name="cases_secondary", blank=True)
+    primary_investigating_agency = models.ForeignKey(InvestigatingAgencyData, on_delete=models.CASCADE, related_name="cases_primary")
+    secondary_investigating_agencies = models.ManyToManyField(InvestigatingAgencyData, related_name="cases_secondary")
+
+    
 
     def __str__(self) -> str:
-        res = "***---------------------------------------***\n"
+        res = "\n\n***---------------------------------------------------------------------------------------------------------------------***\n"
         res += f"{self.case_type} - {self.case_id} ({self.primary_source})\n"
-        res += "***---------------------------------------***\n"
+        res += "***---------------------------------------------------------------------------------------------------------------------***\n"
         res += "\n\n>> |======|META|======| <<\n"
         res += f" > NamUs Id: {self.namus_id_formatted}\n"
         if self.ncmec_number:
             res += f" > NCMEC Number: {self.namus_id_formatted}\n"
-        res += f"Case Created (Internal) - {self.internal_created} | Case Created(Source) - {self.case_created}\n"
-        res += f"Case Last Modified(Source) - {self.case_last_modified}\n"
-        res += f"Resolved: {self.is_resolved} | Archived: {self.is_archived}"
+        res += f" > Case Created (Internal) - {self.case_internal_created} | Case Created(Source) - {self.case_created}\n"
+        res += f" > Case Last Modified(Source) - {self.case_last_modified}\n"
+        res += f" > Resolved: {self.is_resolved} | Archived: {self.is_archived}"
         
-        res += self.identification
-        res += self.demographics
-        res += self.related_items
-        res += self.last_known_location
-
-        res += f"\n\n>> |======|CIRCUMSTANCES OF DISAPPEARANCE|======| <<\n"
-        res += f"* {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.circumstances_of_disappearance else self.circumstances_of_disappearance}\n"
+        res += str(self.identification)
+        res += str(self.demographics)
         res += f" > Primary Residence On Tribal Land: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.primary_residence_on_tribal_land else self.primary_residence_on_tribal_land}\n"
         res += f" > Missing From Tribal Land: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.missing_from_tribal_land else self.missing_from_tribal_land}\n"
+        res += str(self.related_items)
+        res += str(self.last_known_location)
+
+        res += f"\n\n>> |======|CIRCUMSTANCES OF DISAPPEARANCE|======| <<\n"
+        res += f" > {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.circumstances_of_disappearance else self.circumstances_of_disappearance}\n"
+        
 
         res += f"\n\n>> |======|AGENCIES|======| <<\n"
-        res += f" >> Primary Investigating Agency <<\n"
-        res += self.primary_investigating_agency
+        res += f" > Primary Investigating Agency"
+        res += str(self.primary_investigating_agency)
         if self.secondary_investigating_agencies.count() > 0:
             res += f" >> Secondary Investigating Agencies <<\n"
             for secondary_agency in self.secondary_investigating_agencies.all():
                 res += "---\n"
-                res += secondary_agency
+                res += str(secondary_agency)
                 res += "---\n"
         
         res += f"\n\n>> |======|SOURCES|======| <<\n"
@@ -1203,35 +1253,27 @@ class MPCase(models.Model):
             res += ">> Secondary Sources <<\n"
             for secondary_source in self.secondary_sources.all():
                 res += f" * {secondary_source}\n"
+        return res
             
-
-
     @staticmethod 
     def create_mp_case(case_data):
         CaseStats.GLOBAL_CASE_COUNT += 1
         
-        subject_identification_data = case_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_IDENTIFICATION]
         subject_demographics_data = case_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_DEMOGRAPHICS]
-
-        physical_features = case_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_PHYSICAL_FEATURES]
-        distinctive_physical_features = case_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_DISTINCTIVE_PHYSICAL_FEATURES]
-
-        clothing_and_accessories_info = case_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_CLOTHING_AND_ACCESSORIES]
-        vehicles_info = case_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_VEHICLES]
 
         sighting_data = case_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_SIGHTING]
 
-        subject_identification = SubjectIdentification.create_subject_identification(subject_identification_data)
+        subject_identification = SubjectIdentification.create_subject_identification(case_data)
         subject_demographics = SubjectDemographics.create_subject_demographics(subject_demographics_data)
-        subject_description = SubjectDescription.create_subject_description(physical_features=physical_features,
-                                                                            distinctive_physical_features=distinctive_physical_features)
-        subject_related_items = SubjectRelatedItems.create_subject_related_items(clothing_and_accessories_info=clothing_and_accessories_info,
-                                                                                 vehicles_info=vehicles_info)
+        subject_description = SubjectDescription.create_subject_description(case_data)
+        subject_related_items = SubjectRelatedItems.create_subject_related_items(case_data)
         last_known_sighting = Sighting.create_sighting(sighting_data)
+        case_images = CaseImages.create_case_images(case_data)
         
-        case = MPCase(
-            source_link = case_data[InternalReprKeysConfig.SOURCE_LINK],
-            
+        case_source = CaseSource(source=case_data[InternalReprKeysConfig.SOURCE], link=case_data[InternalReprKeysConfig.SOURCE_LINK])
+        case_source.save()
+        
+        case = MPCase(        
             namus_id = case_data[InternalReprKeysConfig.NAMUS_ID],
             namus_id_formatted = case_data[InternalReprKeysConfig.NAMUS_ID_FORMATTED],
             ncmec_number = case_data[InternalReprKeysConfig.NCMEC_NUM],
@@ -1257,7 +1299,8 @@ class MPCase(models.Model):
                 ),
 
             primary_investigating_agency = InvestigatingAgencyData.create_investigating_agency_data(case_data[InternalReprKeysConfig.CASE_DATA_INVESTIGATING_AGENCY_PRIMARY]),
-
+            case_images = case_images,
+            primary_source = case_source
         )
 
         case.save()
@@ -1269,20 +1312,50 @@ class MPCase(models.Model):
 
 ###============================###
 
+INTERNAL_ENUMS = [
+    State,
+    County,
+    City,
+    AgencyType,
+    Jurisdiction,
+    AgencyContactJobTitle,
+    AgencyContactRole,
+    Gender,
+    Ethnicity,
+    TribalAffiliation,
+    HairColor,
+    EyeColor,
+    DescriptiveFeatureCategory,
+    VehicleColor,
+    VehicleMake,
+    VehicleModel,
+    VehicleStyle,
+    DescriptiveItemCategory,
+    Source,
+    PrimaryResidenceOnTribalLand,
+    MissingFromTribalLand,
+]
 
-    # case_contributors?
-"""
-    images
-    default_image
-    documents
-    
-    "viewPermission":"public",
-    "hrefDefaultImageThumbnail":"/api/CaseSets/NamUs/MissingPersons/Cases/61081/Images/Default/Thumbnail",
-    "hrefDefaultImagePoster":"/api/CaseSets/NamUs/MissingPersons/Cases/61081/Images/Default/Poster",
-"""
-
-
-
+ALL_MODELS = INTERNAL_ENUMS + [
+    Location,
+    Sighting,
+    Agency,
+    AgencyContact,
+    InvestigatingAgencyData,
+    Tribe,
+    TribalAssociation,
+    DescriptiveFeatureArticle,
+    DescriptiveItemArticle,
+    VehicleInformation,
+    CaseSource,
+    SubjectIdentification,
+    SubjectDescription,
+    SubjectDemographics,
+    SubjectRelatedItems,
+    MPCase,
+    Image,
+    CaseImages
+]
 
 
 
