@@ -45,8 +45,12 @@ def filter_mp_json_for_internal_repr(json):
     case_data[InternalReprKeysConfig.CASE_DATA_INVESTIGATING_AGENCIES_SECONDARY] = []
     
     for investigating_agency_data in json.get("investigatingAgencies"):
+        
         contact_info = investigating_agency_data.get("selection", {}).get("contact")
-        if investigating_agency_data.get("name") == primary_investigating_agency_name and primary_investigating_agency_name != None:
+        if contact_info != None and (contact_info.get("firstName") is None or contact_info.get("lastName") is None):
+            contact_info = None
+        
+        if investigating_agency_data.get("name") == primary_investigating_agency_name and primary_investigating_agency_name != None and investigating_agency_data:
             case_data[InternalReprKeysConfig.CASE_DATA_INVESTIGATING_AGENCY_PRIMARY] = {
                 InternalReprKeysConfig.STR_NAME: primary_investigating_agency_name,
                 InternalReprKeysConfig.STATE: investigating_agency_data.get("state", {}).get("name"),
@@ -59,7 +63,6 @@ def filter_mp_json_for_internal_repr(json):
                 InternalReprKeysConfig.AGENCY_TYPE: investigating_agency_data.get("selection", {}).get("agency", {}).get("agencyType", {}).get("name"),
                 InternalReprKeysConfig.CASE_NUMBER: investigating_agency_data.get("caseNumber"),
                 InternalReprKeysConfig.DT_CASE_REPORTED: None if not investigating_agency_data.get("dateReported") else datetime.datetime.strptime(investigating_agency_data.get("dateReported"), "%Y-%m-%d"),
-                
                 InternalReprKeysConfig.AGENCY_CONTACT: None if not contact_info else {
                     InternalReprKeysConfig.FIRST_NAME: contact_info.get("firstName"),
                     InternalReprKeysConfig.LAST_NAME: contact_info.get("lastName"),
@@ -67,7 +70,7 @@ def filter_mp_json_for_internal_repr(json):
                     InternalReprKeysConfig.AGENCY_CONTACT_JR: contact_info.get("role")
                 }
             }
-        elif investigating_agency_data.get("name") != None:
+        elif investigating_agency_data.get("name") != None and investigating_agency_data:
             case_data[InternalReprKeysConfig.CASE_DATA_INVESTIGATING_AGENCIES_SECONDARY].append(
                 {
                     InternalReprKeysConfig.STR_NAME: investigating_agency_data.get("name"),
@@ -81,7 +84,6 @@ def filter_mp_json_for_internal_repr(json):
                     InternalReprKeysConfig.AGENCY_TYPE: investigating_agency_data.get("selection", {}).get("agency", {}).get("agencyType", {}).get("name"),
                     InternalReprKeysConfig.CASE_NUMBER: investigating_agency_data.get("caseNumber"),
                     InternalReprKeysConfig.DT_CASE_REPORTED: None if not investigating_agency_data.get("dateReported") else datetime.datetime.strptime(investigating_agency_data.get("dateReported"), "%Y-%m-%d"),
-                    
                     InternalReprKeysConfig.AGENCY_CONTACT: None if not contact_info else {
                         InternalReprKeysConfig.FIRST_NAME: contact_info.get("firstName"),
                         InternalReprKeysConfig.LAST_NAME: contact_info.get("lastName"),

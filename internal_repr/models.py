@@ -1,3 +1,4 @@
+import enum
 from django.db import models
 from .native.case_data_keys import InternalReprKeysConfig
 from .native.case_stats import CaseStats
@@ -91,30 +92,33 @@ class City(models.Model):
             return new_city
 
 class Location(models.Model):
-    address = models.CharField(max_length=256, blank=True, null=True)
-    zip_code = models.CharField(max_length=256, blank=True, null=True)
+    address = models.CharField(max_length=256, blank=True)
+    zip_code = models.CharField(max_length=256, null=True)
     
-    state = models.ForeignKey(State, on_delete=models.CASCADE, related_name="locations", blank=True, null=True)
-    county = models.ForeignKey(County, on_delete=models.CASCADE, related_name="locations", blank=True, null=True)
-    city = models.ForeignKey(City, on_delete=models.CASCADE, related_name="locations", blank=True, null=True)
+    state = models.ForeignKey(State, on_delete=models.CASCADE, related_name="locations", null=True)
+    county = models.ForeignKey(County, on_delete=models.CASCADE, related_name="locations", null=True)
+    city = models.ForeignKey(City, on_delete=models.CASCADE, related_name="locations", null=True)
     street = models.CharField(max_length=256, blank=True, null=True)
 
     lat = models.FloatField(blank=True, null=True)
     lon = models.FloatField(blank=True, null=True)
 
     def __str__(self) -> str:
-        return f"{self.state}, {self.county}"
+        return self.address
 
     def save(self, *args, **kwargs):
-        address = str(self.state) + ' ' + str(self.county) 
-        return super().save()
+        if not self.address:
+            self.address = f"{'' if not self.state else str(self.state) + ', '}\
+{'' if not self.county else str(self.county) + ', '}\
+{'' if not self.city else str(self.city)}"
+        return super().save(args, kwargs)
 
 class Sighting(models.Model):
     date = models.DateField()
     location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name="sightings")
 
     def __str__(self) -> str:
-        return f"{self.location.address} on {self.date.strftime('%d/%m/%Y')}"
+        return f"\n * Sighting in {self.location} on {self.date.strftime('%d/%m/%Y')}\n"
 
     @staticmethod
     def create_sighting(sighting_data):
@@ -252,15 +256,15 @@ class AgencyContactRole(models.Model):
 
 class Agency(models.Model):
     name = models.CharField(max_length=256)
-    phone = models.CharField(max_length=256, blank=True, null=True)
+    phone = models.CharField(max_length=256, null=True)
 
-    jurisdiction = models.CharField(max_length=256, blank=True, null=True)
-    agency_type = models.CharField(max_length=256, blank=True, null=True)
+    jurisdiction = models.CharField(max_length=256, null=True)
+    agency_type = models.CharField(max_length=256, null=True)
     
-    location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name="agencies", blank=True, null=True)
+    location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name="agencies", null=True)
 
     def __str__(self) -> str:
-        return f"{self.name}{'' if not self.location else ', ' + self.location.address}"
+        return self.name
     
     @staticmethod
     def get_agency_from_str(agency_str):
@@ -307,10 +311,9 @@ class AgencyContact(models.Model):
     last_name = models.CharField(max_length=256)
     full_name = models.CharField(max_length=512)
     
-    job_title = models.ForeignKey(AgencyContactJobTitle, on_delete=models.CASCADE, related_name="contacts",blank=True, null=True)
-    role = models.ForeignKey(AgencyContactRole, on_delete=models.CASCADE, related_name="contacts",blank=True, null=True)
-
-    agency = models.ForeignKey(Agency, on_delete=models.CASCADE, related_name="contacts", blank=True, null=True)
+    job_title = models.ForeignKey(AgencyContactJobTitle, on_delete=models.CASCADE, related_name="contacts", null=True)
+    role = models.ForeignKey(AgencyContactRole, on_delete=models.CASCADE, related_name="contacts", null=True)
+    agency = models.ForeignKey(Agency, on_delete=models.CASCADE, related_name="contacts", null=True)
 
     def __str__(self) -> str:
         return f"{self.full_name}{'' if not self.job_title else ', ' + str(self.job_title)}"
@@ -342,16 +345,16 @@ class AgencyContact(models.Model):
         return contact
 
 class InvestigatingAgencyData(models.Model):
-    agency = models.ForeignKey(Agency, on_delete=models.CASCADE, related_name="investigations")
-    contact = models.ForeignKey(AgencyContact, on_delete=models.CASCADE, related_name="investigations", null=True)
+    agency = models.ForeignKey(Agency, on_delete=models.PROTECT, related_name="investigations")
+    contact = models.ForeignKey(AgencyContact, on_delete=models.PROTECT, related_name="investigations", null=True)
 
     case_number = models.CharField(max_length=256, null=True)
     date_reported = models.DateField(max_length=256, null=True)
 
     def __str__(self) -> str:
-        res = f"\n * Agency: {str(self.agency)}\n"
+        res = f"\n * Agency: {self.agency}\n"
         res += f" * Case Number: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.case_number else self.case_number}\n"
-        res += f" * Contact: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.contact else str(self.contact)}\n"
+        res += f" * Contact: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.contact else self.contact}\n"
         res += f" * Date Reported: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.date_reported else self.date_reported}\n"
         return res
     
@@ -512,26 +515,26 @@ class TribalAssociation(models.Model):
         return res
 
 class SubjectDemographics(models.Model):
-    current_min_age = models.FloatField(blank=True, null=True)
-    current_max_age = models.FloatField(blank=True, null=True)
-    missing_min_age = models.FloatField(blank=True, null=True)
-    missing_max_age = models.FloatField(blank=True, null=True)
+    current_min_age = models.FloatField(null=True)
+    current_max_age = models.FloatField(null=True)
+    missing_min_age = models.FloatField(null=True)
+    missing_max_age = models.FloatField(null=True)
     
-    height_from_inches = models.FloatField(blank=True, null=True)
-    height_to_inches = models.FloatField(blank=True, null=True)
-    weight_from_lbs = models.FloatField(blank=True, null=True)
-    weight_to_lbs = models.FloatField(blank=True, null=True)
+    height_from_inches = models.FloatField(null=True)
+    height_to_inches = models.FloatField(null=True)
+    weight_from_lbs = models.FloatField(null=True)
+    weight_to_lbs = models.FloatField(null=True)
 
-    gender = models.ForeignKey(Gender, on_delete=models.CASCADE, related_name="subject_descriptions", blank=True, null=True)
+    gender = models.ForeignKey(Gender, on_delete=models.PROTECT, related_name="subject_descriptions", null=True)
 
-    primary_ethnicity = models.ForeignKey(Ethnicity, on_delete=models.CASCADE, related_name="subject_demographics_primary", blank=True, null=True)
-    ethnicities = models.ManyToManyField(Ethnicity, related_name="subject_demographics_mixed", blank=True)
+    primary_ethnicity = models.ForeignKey(Ethnicity, on_delete=models.PROTECT, related_name="subject_demographics_primary", null=True)
+    ethnicities = models.ManyToManyField(Ethnicity, related_name="subject_demographics_mixed")
 
-    tribal_affiliation = models.ForeignKey(TribalAffiliation, on_delete=models.CASCADE, related_name="subject_demographics", blank=True, null=True)
+    tribal_affiliation = models.ForeignKey(TribalAffiliation, on_delete=models.PROTECT, related_name="subject_demographics", null=True)
     tribal_associations = models.ManyToManyField(TribalAssociation, related_name="subject_demographics")
 
     def __str__(self) -> str:
-        res = "\n\n>> |======|DEMOGRAPHICS|======| <<\n"
+        res = "\n>> |======|DEMOGRAPHICS|======| <<\n"
         
         if self.missing_min_age and self.missing_max_age:
             if self.missing_min_age == self.missing_max_age:
@@ -717,14 +720,14 @@ class DescriptiveFeatureCategory(models.Model):
 
 class SubjectDescription(models.Model):
 
-    hair_color = models.ForeignKey(HairColor, on_delete=models.CASCADE, related_name="subject_descriptions", blank=True, null=True)
-    left_eye_color = models.ForeignKey(EyeColor, on_delete=models.CASCADE, related_name="subject_left_eye_descriptions", blank=True, null=True)
-    right_eye_color = models.ForeignKey(EyeColor, on_delete=models.CASCADE, related_name="subject_right_eye_descriptions", blank=True, null=True)
+    hair_color = models.ForeignKey(HairColor, on_delete=models.PROTECT, related_name="subject_descriptions", null=True)
+    left_eye_color = models.ForeignKey(EyeColor, on_delete=models.PROTECT, related_name="subject_left_eye_descriptions", null=True)
+    right_eye_color = models.ForeignKey(EyeColor, on_delete=models.PROTECT, related_name="subject_right_eye_descriptions", null=True)
     
-    head_hair_description = models.CharField(max_length=512, blank=True, null=True)
-    body_hair_description = models.CharField(max_length=512, blank=True, null=True)
-    facial_hair_description = models.CharField(max_length=512, blank=True, null=True)
-    eye_description = models.CharField(max_length=512, blank=True, null=True)
+    head_hair_description = models.CharField(max_length=512, null=True)
+    body_hair_description = models.CharField(max_length=512, null=True)
+    facial_hair_description = models.CharField(max_length=512, null=True)
+    eye_description = models.CharField(max_length=512, null=True)
 
     def __str__(self) -> str:
         res = "\n\n>> |======|DESCRIPTION|======| <<\n"
@@ -773,7 +776,7 @@ class SubjectDescription(models.Model):
         return description
 
 class DescriptiveFeatureArticle(models.Model):
-    category = models.ForeignKey(DescriptiveFeatureCategory, on_delete=models.CASCADE, related_name="articles")
+    category = models.ForeignKey(DescriptiveFeatureCategory, on_delete=models.PROTECT, related_name="articles")
     description = models.TextField(max_length=1000)
 
     subject_description = models.ForeignKey(SubjectDescription, on_delete=models.CASCADE, related_name="distinctive_physical_features")
@@ -786,8 +789,8 @@ class SubjectIdentification(models.Model):
     first_name = models.CharField(max_length=256)
     last_name = models.CharField(max_length=256)
     
-    middle_name = models.CharField(blank=True, null=True, max_length=256)
-    nicknames = models.CharField(blank=True, null=True, max_length=1024)
+    middle_name = models.CharField(null=True, max_length=256)
+    nicknames = models.CharField(null=True, max_length=1024)
 
     def __str__(self) -> str:
         res = "\n\n>> |======|IDENTIFICATION|======| <<\n"
@@ -948,12 +951,12 @@ class SubjectRelatedItems(models.Model):
     def __str__(self) -> str:
         res = ""
         if self.clothing_and_accessories.count() > 0:
-            res += "\n\n>> |======|CLOTHING AND ACCESSORIES|======| <<\n"
+            res += "\n>> |======|CLOTHING AND ACCESSORIES|======| <<\n"
             for clothing_or_accessory in self.clothing_and_accessories.all():
                 res += f"* {clothing_or_accessory.category.name} - {clothing_or_accessory.description}\n"
         
         if self.vehicles_info.count() > 0:
-            res += "\n\n>> |======|VEHICLES|======| <<\n"
+            res += "\n>> |======|VEHICLES|======| <<\n"
             for vehicle_info in self.vehicles_info.all():
                 res += "---\n"
                 res += f" > Tag Number: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.tag_number else vehicle_info.tag_number}\n"
@@ -972,7 +975,6 @@ class SubjectRelatedItems(models.Model):
                 res += "---"
         return res
                 
-    
     @staticmethod
     def create_subject_related_items(subject_related_items_data):
         related_items = SubjectRelatedItems()
@@ -1014,18 +1016,18 @@ class DescriptiveItemArticle(models.Model):
     subject_related_items = models.ForeignKey(SubjectRelatedItems, on_delete=models.CASCADE, related_name="clothing_and_accessories")
 
 class VehicleInformation(models.Model):
-    vehicle_year = models.IntegerField(blank=True, null=True)
-    tag_expiration_year = models.IntegerField(blank=True, null=True)
+    vehicle_year = models.IntegerField(null=True)
+    tag_expiration_year = models.IntegerField(null=True)
     
-    tag_state = models.ForeignKey(State, on_delete=models.CASCADE, related_name="vehicles", blank=True, null=True)
+    tag_state = models.ForeignKey(State, on_delete=models.CASCADE, related_name="vehicles", null=True)
     
     tag_number = models.CharField(max_length=256, blank=True, null=True)
     comment = models.CharField(max_length=256, blank=True, null=True)
     
     vehicle_make = models.CharField(max_length=256, blank=True, null=True)
-    vehicle_model = models.ForeignKey(VehicleModel, on_delete=models.CASCADE, related_name="vehicles", blank=True, null=True)
-    vehicle_style = models.ForeignKey(VehicleStyle, on_delete=models.CASCADE, related_name="vehicles", blank=True, null=True)
-    vehicle_color = models.ForeignKey(VehicleColor, on_delete=models.CASCADE, related_name="vehicles", blank=True, null=True)
+    vehicle_model = models.ForeignKey(VehicleModel, on_delete=models.CASCADE, related_name="vehicles", null=True)
+    vehicle_style = models.ForeignKey(VehicleStyle, on_delete=models.CASCADE, related_name="vehicles", null=True)
+    vehicle_color = models.ForeignKey(VehicleColor, on_delete=models.CASCADE, related_name="vehicles", null=True)
 
     subject_related_items = models.ForeignKey(SubjectRelatedItems, on_delete=models.CASCADE, related_name="vehicles_info")
 
@@ -1033,9 +1035,11 @@ class VehicleInformation(models.Model):
 
 ######============================######
 
+
 #####============================INTERNAL MISC ENUMS============================######
 
-class CaseType(models.TextChoices):
+@enum.unique
+class CaseType(enum.Enum):
     MP = "Missing Persons Case"
     UID = "Unidentified Body Case"
 
@@ -1043,13 +1047,18 @@ class CaseType(models.TextChoices):
     def choices(cls):
         return [(item.name, item.value) for item in cls]
 
-class SourceType(models.TextChoices):
+@enum.unique
+class SourceType(enum.Enum):
     GOV_BACKED = "Government Backed"
     PRIVATE = "Private"
 
+    @classmethod
+    def choices(cls):
+        return [(item.name, item.value) for item in cls]
+
 class Source(models.Model):
     name = models.CharField(max_length=64)
-    source_type = models.CharField(choices=SourceType.choices, max_length=256)
+    source_type = models.CharField(max_length=256)
 
     def save(self, *args, **kwargs):
         self.name = self.name.lower()
@@ -1080,12 +1089,12 @@ class Image(models.Model):
     thumbnail_href = models.CharField(max_length=4096)
     file_path = models.CharField(max_length=512, blank=True, default=InternalReprKeysConfig.STR_NONE)
     
-    height_poster = models.IntegerField(blank=True, null=True)
-    width_poster = models.IntegerField(blank=True, null=True)
-    height_thumbnail = models.IntegerField(blank=True, null=True)
-    width_thumbnail = models.IntegerField(blank=True, null=True)
+    height_poster = models.IntegerField(null=True)
+    width_poster = models.IntegerField(null=True)
+    height_thumbnail = models.IntegerField(null=True)
+    width_thumbnail = models.IntegerField(null=True)
     
-    download_link = models.CharField(max_length=4096, blank=True, null=True)
+    download_link = models.CharField(max_length=4096, null=True)
 
 class CaseImages(models.Model):
     default_image = models.ForeignKey(Image, on_delete=models.CASCADE, related_name="case_images_default")
@@ -1093,8 +1102,6 @@ class CaseImages(models.Model):
 
     @staticmethod
     def create_case_images(case_images_data):
-        
-
         default_image = Image(
             poster_href = case_images_data[InternalReprKeysConfig.DEFAULT_IMAGE_POSTER],
             thumbnail_href = case_images_data[InternalReprKeysConfig.DEFAULT_IMAGE_THUMBNAIL]
@@ -1119,9 +1126,8 @@ class CaseImages(models.Model):
         
         return case_images
 
-
-
 ###============================###
+
 
 ######============================CASES============================######
 
@@ -1181,9 +1187,10 @@ class PrimaryResidenceOnTribalLand(models.Model):
 
 class MPCase(models.Model):
     
-    case_type = models.CharField(max_length=64, choices=CaseType.choices, blank=True, editable=False, default=CaseType.MP)
-    case_id = models.CharField(max_length=64, blank=True, default=f"C_MP{CaseStats.GLOBAL_CASE_COUNT}")
-    case_images = models.ForeignKey(CaseImages, on_delete=models.CASCADE, related_name="case")
+    case_type = models.CharField(max_length=64, blank=True, editable=False, default=CaseType.MP)
+    case_id = models.CharField(max_length=64, editable=False, unique=True, db_index=True)
+    case_images = models.ForeignKey(CaseImages, on_delete=models.PROTECT, related_name="case")
+    
     case_internal_created = models.DateField(auto_now=True)
     case_created = models.DateField()
     case_last_modified = models.DateField()
@@ -1192,33 +1199,31 @@ class MPCase(models.Model):
     namus_id_formatted = models.CharField(max_length=256)
     ncmec_number = models.CharField(max_length=256, null=True)
     
-    primary_source = models.ForeignKey(CaseSource, on_delete=models.CASCADE, related_name="cases_primary")
+    primary_source = models.ForeignKey(CaseSource, on_delete=models.PROTECT, related_name="cases_primary")
     secondary_sources = models.ManyToManyField(CaseSource, related_name="cases_secondary")
     
-    identification = models.OneToOneField(SubjectIdentification, on_delete=models.CASCADE, related_name="case")
-    demographics = models.OneToOneField(SubjectDemographics, on_delete=models.CASCADE, related_name="case")
-    description = models.OneToOneField(SubjectDescription, on_delete=models.CASCADE, related_name="case")
-    related_items = models.OneToOneField(SubjectRelatedItems, on_delete=models.CASCADE, related_name="case")
-    last_known_location = models.ForeignKey(Sighting, on_delete=models.CASCADE, related_name="cases")
+    identification = models.OneToOneField(SubjectIdentification, on_delete=models.PROTECT, related_name="case")
+    demographics = models.OneToOneField(SubjectDemographics, on_delete=models.PROTECT, related_name="case")
+    description = models.OneToOneField(SubjectDescription, on_delete=models.PROTECT, related_name="case")
+    related_items = models.OneToOneField(SubjectRelatedItems, on_delete=models.PROTECT, related_name="case")
+    last_known_location = models.ForeignKey(Sighting, on_delete=models.PROTECT, related_name="cases")
 
-    primary_residence_on_tribal_land = models.ForeignKey(PrimaryResidenceOnTribalLand, on_delete=models.CASCADE, related_name="cases", null=True)
-    missing_from_tribal_land = models.ForeignKey(MissingFromTribalLand, on_delete=models.CASCADE, related_name="cases", null=True)
+    primary_residence_on_tribal_land = models.ForeignKey(PrimaryResidenceOnTribalLand, on_delete=models.PROTECT, related_name="cases", null=True)
+    missing_from_tribal_land = models.ForeignKey(MissingFromTribalLand, on_delete=models.PROTECT, related_name="cases", null=True)
 
     circumstances_of_disappearance = models.TextField(max_length=10000, null=True)
     
     is_resolved = models.BooleanField(null=True)
     is_archived = models.BooleanField(blank=True, default=False)
     
-    primary_investigating_agency = models.ForeignKey(InvestigatingAgencyData, on_delete=models.CASCADE, related_name="cases_primary")
+    primary_investigating_agency = models.ForeignKey(InvestigatingAgencyData, on_delete=models.PROTECT, related_name="cases_primary", null=True)
     secondary_investigating_agencies = models.ManyToManyField(InvestigatingAgencyData, related_name="cases_secondary")
-
-    
 
     def __str__(self) -> str:
         res = "\n\n***---------------------------------------------------------------------------------------------------------------------***\n"
-        res += f"{self.case_type} - {self.case_id} ({self.primary_source})\n"
+        res += f"                 {self.case_type} - {self.case_id} ({self.primary_source})\n"
         res += "***---------------------------------------------------------------------------------------------------------------------***\n"
-        res += "\n\n>> |======|META|======| <<\n"
+        res += "\n>> |======|META|======| <<\n"
         res += f" > NamUs Id: {self.namus_id_formatted}\n"
         if self.ncmec_number:
             res += f" > NCMEC Number: {self.namus_id_formatted}\n"
@@ -1231,13 +1236,12 @@ class MPCase(models.Model):
         res += f" > Primary Residence On Tribal Land: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.primary_residence_on_tribal_land else self.primary_residence_on_tribal_land}\n"
         res += f" > Missing From Tribal Land: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.missing_from_tribal_land else self.missing_from_tribal_land}\n"
         res += str(self.related_items)
-        res += str(self.last_known_location)
 
-        res += f"\n\n>> |======|CIRCUMSTANCES OF DISAPPEARANCE|======| <<\n"
+        res += f"\n>> |======|CIRCUMSTANCES OF DISAPPEARANCE|======| <<\n"
         res += f" > {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.circumstances_of_disappearance else self.circumstances_of_disappearance}\n"
+        res += str(self.last_known_location)
         
-
-        res += f"\n\n>> |======|AGENCIES|======| <<\n"
+        res += f"\n>> |======|AGENCIES|======| <<\n"
         res += f" > Primary Investigating Agency"
         res += str(self.primary_investigating_agency)
         if self.secondary_investigating_agencies.count() > 0:
@@ -1247,7 +1251,7 @@ class MPCase(models.Model):
                 res += str(secondary_agency)
                 res += "---\n"
         
-        res += f"\n\n>> |======|SOURCES|======| <<\n"
+        res += f"\n>> |======|SOURCES|======| <<\n"
         res += f" > Primary Source: {self.primary_source}\n"
         if self.secondary_sources.count() > 0:
             res += ">> Secondary Sources <<\n"
@@ -1258,7 +1262,8 @@ class MPCase(models.Model):
     @staticmethod 
     def create_mp_case(case_data):
         CaseStats.GLOBAL_CASE_COUNT += 1
-        
+        CaseStats.MP_CASE_COUNT += 1
+
         subject_demographics_data = case_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_DEMOGRAPHICS]
 
         sighting_data = case_data[InternalReprKeysConfig.CASE_DATA_SUBJECT_SIGHTING]
@@ -1273,7 +1278,8 @@ class MPCase(models.Model):
         case_source = CaseSource(source=case_data[InternalReprKeysConfig.SOURCE], link=case_data[InternalReprKeysConfig.SOURCE_LINK])
         case_source.save()
         
-        case = MPCase(        
+        case = MPCase(
+            case_id = f"C_MP{CaseStats.MP_CASE_COUNT}",      
             namus_id = case_data[InternalReprKeysConfig.NAMUS_ID],
             namus_id_formatted = case_data[InternalReprKeysConfig.NAMUS_ID_FORMATTED],
             ncmec_number = case_data[InternalReprKeysConfig.NCMEC_NUM],
@@ -1298,7 +1304,7 @@ class MPCase(models.Model):
                     sighting_data[InternalReprKeysConfig.LOCATION_DATA][InternalReprKeysConfig.MISSING_FROM_TRIBAL_LAND]
                 ),
 
-            primary_investigating_agency = InvestigatingAgencyData.create_investigating_agency_data(case_data[InternalReprKeysConfig.CASE_DATA_INVESTIGATING_AGENCY_PRIMARY]),
+            primary_investigating_agency = None if case_data[InternalReprKeysConfig.CASE_DATA_INVESTIGATING_AGENCY_PRIMARY] == None else InvestigatingAgencyData.create_investigating_agency_data(case_data[InternalReprKeysConfig.CASE_DATA_INVESTIGATING_AGENCY_PRIMARY]),
             case_images = case_images,
             primary_source = case_source
         )
@@ -1309,7 +1315,6 @@ class MPCase(models.Model):
             data_object = InvestigatingAgencyData.create_investigating_agency_data(investigating_agency_data)
             case.secondary_investigating_agencies.add(data_object)
         
-
 ###============================###
 
 INTERNAL_ENUMS = [
@@ -1336,27 +1341,28 @@ INTERNAL_ENUMS = [
     MissingFromTribalLand,
 ]
 
-ALL_MODELS = INTERNAL_ENUMS + [
-    Location,
-    Sighting,
-    Agency,
-    AgencyContact,
-    InvestigatingAgencyData,
-    Tribe,
-    TribalAssociation,
-    DescriptiveFeatureArticle,
-    DescriptiveItemArticle,
-    VehicleInformation,
-    CaseSource,
+INTERNAL_MODELS = [
+    MPCase,
     SubjectIdentification,
     SubjectDescription,
     SubjectDemographics,
     SubjectRelatedItems,
-    MPCase,
+    CaseSource,
+    CaseImages,
+    Sighting,
+    InvestigatingAgencyData,
+    AgencyContact,
+    Agency,
+    VehicleInformation,
+    Tribe,
+    TribalAssociation,
+    DescriptiveFeatureArticle,
+    DescriptiveItemArticle,
+    Location,
     Image,
-    CaseImages
 ]
 
+ALL_TYPES = INTERNAL_MODELS + INTERNAL_ENUMS
 
 
 
