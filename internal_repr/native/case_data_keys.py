@@ -1,17 +1,23 @@
 class InternalReprKeysConfig:
+    
+    MP_IDENTIFICATION = "mp_identification"
+    MP_DEMOGRAPHICS = "mp_demographics"
+    MP_SIGHTHING = "mp_sighting"
 
-    CASE_DATA_INVESTIGATING_AGENCY_PRIMARY = "primary_investigating_agency"
-    CASE_DATA_INVESTIGATING_AGENCIES_SECONDARY = "secondary_investigating_agencies"
-    CASE_DATA_SUBJECT_IDENTIFICATION = "subject_identification"
-    CASE_DATA_SUBJECT_DEMOGRAPHICS = "subject_demographics"
-    CASE_DATA_SUBJECT_PHYSICAL_FEATURES = "subject_physical_features"
-    CASE_DATA_SUBJECT_DISTINCTIVE_PHYSICAL_FEATURES = "subject_distinctive_physical_features"
-    CASE_DATA_SUBJECT_CLOTHING_AND_ACCESSORIES = "subject_clothing_and_accessories"
-    CASE_DATA_SUBJECT_VEHICLES = "subject_vehicles"
-    CASE_DATA_SUBJECT_SIGHTING = "subject_sighting_data"
+    UID_IDENTIFICATION = "uid_identification"
+    UID_DEMOGRAPHICS = "uid_demographics"
+    UID_STATUS = "uid_status"
+    
+    PHYSICAL_FEATURES = "physical_features"
+    DISTINCTIVE_PHYSICAL_FEATURES = "distinctive_physical_features"
+    CLOTHING_AND_ACCESSORIES = "clothing_and_accessories"
+    
     
     CASE_RESOLVED = "is_resolved"
     CASE_NUMBER = "case_number"
+
+    INVESTIGATING_AGENCY_PRIMARY = "primary_investigating_agency"
+    INVESTIGATING_AGENCIES_SECONDARY = "secondary_investigating_agencies"
     
     SOURCE_LINK = "source_link"
     SOURCE = "source" 
@@ -20,6 +26,7 @@ class InternalReprKeysConfig:
     DT_SOURCE_LAST_MODIFIED = "dt_source_last_modified"
     DT_CASE_REPORTED = "dt_reported"
     DT_SIGHTING = "dt_sighting"
+    DT_BODY_FOUND = "dt_body_found"
     
     STR_NAME = "name"
     STR_CATEGORY_NAME = "category_name"
@@ -40,7 +47,6 @@ class InternalReprKeysConfig:
     RES_WIDTH = "width"
     HREF = "href"
 
-
     FIRST_NAME = "first_name"
     MIDDLE_NAME = "middle_name"
     LAST_NAME = "last_name"
@@ -52,6 +58,15 @@ class InternalReprKeysConfig:
     NCMEC_NUM = "ncmec_number"
     
     CIRCUMSTANCES_OF_DISAPPEARANCE = "circumstances_of_disappearance"
+    
+    CICUMSTANCES_OF_RECOVERY = "circumstances_of_recovery"
+    DETAILS_OF_RECOVERY = "details_of_recovery"
+    CONDITION_OF_REMAINS = "condition_of_remains"
+
+    HEAD_NOT_RECOVERED = "head_not_recovered"
+    TORSO_NOT_RECOVERED = "torso_not_recovered"
+    LIMBS_NOT_RECOVERED = "limbs_not_recovered"
+    HANDS_NOT_RECOVERED = "hands_not_recovered"
     
     JURISDICTION = "jurisdiction"
     AGENCY_TYPE = "agency_type"
@@ -74,10 +89,21 @@ class InternalReprKeysConfig:
     MISSING_MIN_AGE = "missing_min_age"
     MISSING_MAX_AGE = "missing_max_age"
 
+    ESTIMATED_AGE_GROUP = "estimated_age_group"
+    ESTIMATED_AGE_FROM = "estimated_age_from"
+    ESTIMATED_AGE_TO = "estimated_age_to"
+    ESTIMATED_YEAR_OF_BIRTH_FROM = "estimated_year_of_birth_from"
+    ESTIMATED_YEAR_OF_BIRTH_TO = "estimated_year_of_birth_to"
+    ESTIMATED_YEAR_OF_DEATH_FROM = "estimated_year_of_death_from"
+    ESTIMATED_YEAR_OF_DEATH_TO = "estimated_year_of_death_to"
+
     HEIGHT_FROM_INCHES = "height_from_inches"
     HEIGHT_TO_INCHES = "height_to_inches"
     WEIGHT_FROM_LBS = "weight_from_lbs"
     WEIGHT_TO_LBS = "weight_to_lbs"
+
+    HEIGHT_CERTAINTY = "height_certainty"
+    WEIGHT_CERTAINTY = "weight_certainty"
 
     PRIMARY_ETHNICITY = "primary_ethnicity"
     ETHNICITIES = "ethnicities"
@@ -89,6 +115,7 @@ class InternalReprKeysConfig:
     TRIBE_ENROLLMENT = "is_enrolled"
     PRIMARY_RESIDENCE_ON_TRIBAL_LAND = "primary_residence_on_tribal_land"
     MISSING_FROM_TRIBAL_LAND = "missing_from_tribal_land"
+    FOUND_ON_TRIBAL_LAND = "found_on_tribal_land"
 
     HAIR_COLOR = "hair_color"
     LEFT_EYE_COLOR = "left_eye_color"
@@ -99,6 +126,7 @@ class InternalReprKeysConfig:
     FACIAL_HAIR_DESC = "facial_hair_description"
     EYE_DESC = "eye_description"
 
+    VEHICLES = "vehicles"
     VEHICLE_YEAR = "vehicle_year"
     VEHICLE_STYLE = "vehicle_style"
     VEHICLE_COLOR = "vehicle_color"

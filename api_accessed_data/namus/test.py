@@ -1,6 +1,6 @@
 import grequests, requests, json, functools, traceback
-from internal_repr.models import MPCase
-from .filters import filter_mp_json_for_internal_repr
+from internal_repr.models import MPCase, UIDCase
+from .filters import filter_mp_json_for_internal_repr, filter_uid_json_for_internal_repr
 SEARCH_LIMIT = 10000
 REQUEST_BATCH_SIZE = 50
 REQUEST_FEEDBACK_INTERVAL = 50
@@ -17,9 +17,9 @@ CASE_TYPES = {
 }
 
 
-def fetch_missing_persons_data():
+def fetch_case_data(case_type_r):
     ###DEBUG
-    case_type = "MissingPersons"
+    case_type = case_type_r
     ###DEBUG
     
     print("\n > Fetching states\n")
@@ -89,7 +89,7 @@ def requestFeedback(response, **kwargs):
     global errors
     
     try:
-        filtered_case_data = filter_mp_json_for_internal_repr(response.json())
+        filtered_case_data = filter_uid_json_for_internal_repr(response.json())
     except Exception as ex:
          traceback.print_exc()
          error = f" >!! {ex}\n"
@@ -98,7 +98,7 @@ def requestFeedback(response, **kwargs):
          return
 
     try:
-        internal_case_repr = MPCase.create_mp_case(case_data=filtered_case_data)
+        internal_case_repr = UIDCase.create_uid_case(case_data=filtered_case_data)
     except Exception as ex:
         error = f" > {filtered_case_data['namus_id']} --- {ex}\n"
         traceback.print_exc()
@@ -114,6 +114,10 @@ def requestFeedback(response, **kwargs):
 
 def fetch_mp_json(namus_id):
     case = requests.get(CASE_ENDPOINT.format(type="MissingPersons", case=namus_id), headers={"User-Agent": USER_AGENT})
+    print(case.json())
+
+def fetch_uid_json(namus_id):
+    case = requests.get(CASE_ENDPOINT.format(type="UnidentifiedPersons", case=namus_id), headers={"User-Agent": USER_AGENT})
     print(case.json())
 
 
