@@ -169,7 +169,7 @@ def filter_mp_json_for_internal_repr(json):
         } for vehicle_info in json.get("vehicles")
     ]
 
-    case_data[InternalReprKeysConfig.MP_SIGHTHING_DATA] = {
+    case_data[InternalReprKeysConfig.MP_SIGHTHING] = {
         InternalReprKeysConfig.DT_SIGHTING: None if not json.get("sighting", {}).get("date") else datetime.datetime.strptime(json.get("sighting", {}).get("date"), "%Y-%m-%d"),
         InternalReprKeysConfig.LOCATION_DATA: {
             InternalReprKeysConfig.FORMATTED_ADDRESS: json.get("sighting", {}).get("publicGeolocation", {}).get("formattedAddress"),

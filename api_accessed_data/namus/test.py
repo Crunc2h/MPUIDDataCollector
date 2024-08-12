@@ -21,7 +21,11 @@ def fetch_case_data(case_type_r):
     ###DEBUG
     case_type = case_type_r
     ###DEBUG
-    
+    if case_type == "MissingPersons":
+        feedback_func = requestFeedbackMP
+    else:
+        feedback_func = requestFeedbackUID
+    print(f" » Fetching {case_type} data...")
     print("\n > Fetching states\n")
     states = requests.get(STATE_ENDPOINT, headers={"User-Agent": USER_AGENT}).json()
 
@@ -63,7 +67,7 @@ def fetch_case_data(case_type_r):
     caseRequests = (
             grequests.get(
                 CASE_ENDPOINT.format(type=case_type, case=case["namus2Number"]),
-                hooks={"response": requestFeedback},
+                hooks={"response": feedback_func},
                 headers={"User-Agent": USER_AGENT},
             )
             for case in cases
@@ -85,7 +89,33 @@ def fetch_case_data(case_type_r):
     
     print(" > Scraping completed")
 
-def requestFeedback(response, **kwargs):
+def requestFeedbackMP(response, **kwargs):
+    global errors
+    
+    try:
+        filtered_case_data = filter_mp_json_for_internal_repr(response.json())
+    except Exception as ex:
+         traceback.print_exc()
+         error = f" >!! {ex}\n"
+         print(error)
+         errors += error    
+         return
+
+    try:
+        internal_case_repr = MPCase.create_mp_case(case_data=filtered_case_data)
+    except Exception as ex:
+        error = f" > {filtered_case_data['namus_id']} --- {ex}\n"
+        traceback.print_exc()
+        errors += error
+        return
+
+
+    global completedCases
+    completedCases = completedCases + 1
+    if completedCases % REQUEST_FEEDBACK_INTERVAL == 0:
+        print(" > Completed {count} cases".format(count=completedCases))
+
+def requestFeedbackUID(response, **kwargs):
     global errors
     
     try:
@@ -110,7 +140,6 @@ def requestFeedback(response, **kwargs):
     completedCases = completedCases + 1
     if completedCases % REQUEST_FEEDBACK_INTERVAL == 0:
         print(" > Completed {count} cases".format(count=completedCases))
-
 
 def fetch_mp_json(namus_id):
     case = requests.get(CASE_ENDPOINT.format(type="MissingPersons", case=namus_id), headers={"User-Agent": USER_AGENT})

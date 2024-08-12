@@ -12,8 +12,10 @@ def reset_db(delete_types=ALL_TYPES):
         message = type.objects.all().delete()
         print(f" * {type.__name__} - {message[0]} objects deleted")
 
-def test():
+
+def test_all():
     reset_db()
     namus = Source(name="namus", source_type=SourceType.GOV_BACKED)
     namus.save()
+    fetch_case_data("MissingPersons")
     fetch_case_data("UnidentifiedPersons")
