@@ -2,7 +2,6 @@ import enum
 from django.db import models
 from .native.case_data_keys import InternalReprKeysConfig
 from .native.case_stats import CaseStats
-from .models import SubjectDescription, SubjectRelatedItems
 
 class State(models.Model):
     name = models.CharField(max_length=64)
@@ -115,7 +114,7 @@ class Sighting(models.Model):
     location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name="sightings")
 
     def __str__(self) -> str:
-        return f"\n * Sighting in {self.location} on {self.date.strftime('%d/%m/%Y')}\n"
+        return f" » Sighting in {self.location} on {self.date.strftime('%d/%m/%Y')}"
 
     @staticmethod
     def create_sighting(sighting_data):
@@ -344,10 +343,10 @@ class InvestigatingAgencyData(models.Model):
     date_reported = models.DateField(max_length=256, null=True)
 
     def __str__(self) -> str:
-        res = f"\n * Agency: {self.agency}\n"
-        res += f" * Case Number: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.case_number else self.case_number}\n"
-        res += f" * Contact: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.contact else self.contact}\n"
-        res += f" * Date Reported: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.date_reported else self.date_reported}\n"
+        res = f" X Agency: {self.agency}\n"
+        res += f" X Case Number: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.case_number else self.case_number}\n"
+        res += f" X Contact: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.contact else self.contact}\n"
+        res += f" X Date Reported: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.date_reported else self.date_reported}"
         return res
     
     @staticmethod
@@ -563,6 +562,313 @@ class WeightCertainty(models.Model):
 
 
 
+class Tribe(models.Model):
+    name = models.CharField(max_length=64)
+
+    def save(self, *args, **kwargs):
+        self.name = self.name.title()
+        super().save(args, kwargs)
+
+    def __str__(self) -> str:
+        return self.name
+
+    @staticmethod
+    def get_tribe_from_str(tribe_str):
+        if not tribe_str:
+            return
+        tribe_str = tribe_str.title()
+        tribes = Tribe.objects.all()
+        matching_tribe = tribes.filter(name=tribe_str)
+        if matching_tribe.count() > 1:
+            raise ValueError("There are duplicate tribes in the database!")
+        elif matching_tribe.count() == 1:
+            return matching_tribe.first()
+        elif matching_tribe.count() == 0:
+            new_tribe = Tribe(name=tribe_str)
+            new_tribe.save()
+            return new_tribe
+
+class TribalAffiliation(models.Model):
+    name = models.CharField(max_length=64)
+
+    def save(self, *args, **kwargs):
+        self.name = self.name.title()
+        super().save(args, kwargs)
+
+    def __str__(self) -> str:
+        return self.name
+
+    @staticmethod
+    def get_tribal_affiliation_from_str(affiliation_str):
+        if not affiliation_str:
+            return
+        affiliation_str = affiliation_str.title()
+        affiliations = TribalAffiliation.objects.all()
+        matching_affiliation = affiliations.filter(name=affiliation_str)
+        if matching_affiliation.count() > 1:
+            raise ValueError("There are duplicate tribal affiliations in the database!")
+        elif matching_affiliation.count() == 1:
+            return matching_affiliation.first()
+        elif matching_affiliation.count() == 0:
+            new_affiliation = TribalAffiliation(name=affiliation_str)
+            new_affiliation.save()
+            return new_affiliation
+
+class TribalAssociation(models.Model):
+    tribe = models.ForeignKey(Tribe, on_delete=models.CASCADE, related_name="associations")
+    is_enrolled = models.BooleanField(null=True)
+
+    def __str__(self) -> str:
+        res = f" » Tribe Name: {self.tribe.name}\n"
+        if self.is_enrolled is None:
+            res += f" » Enrollment: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
+        else:
+            if self.is_enrolled:
+                res += f" » Enrollment: {InternalReprKeysConfig.STR_YES}\n"
+            else:
+                res += f" » Enrollment: {InternalReprKeysConfig.STR_NO}\n"
+        return res
+
+class PrimaryResidenceOnTribalLand(models.Model):
+    name = models.CharField(max_length=64)
+
+    def save(self, *args, **kwargs):
+        self.name = self.name.title()
+        super().save(args, kwargs)
+
+    def __str__(self) -> str:
+        return self.name
+
+    @staticmethod
+    def get_primary_residence_on_tribal_land(primary_residence_on_tbland_str):
+        if not primary_residence_on_tbland_str:
+            return
+        primary_residence_on_tbland_str = primary_residence_on_tbland_str.title()
+        pr_on_tblands = PrimaryResidenceOnTribalLand.objects.all()
+        matching_pr_on_tbland = pr_on_tblands.filter(name=primary_residence_on_tbland_str)
+        if matching_pr_on_tbland.count() > 1:
+            raise ValueError("There are duplicate pr_on_tblands in the database!")
+        elif matching_pr_on_tbland.count() == 1:
+            return matching_pr_on_tbland.first()
+        elif matching_pr_on_tbland.count() == 0:
+            new_pr_on_tbland = PrimaryResidenceOnTribalLand(name=primary_residence_on_tbland_str)
+            new_pr_on_tbland.save()
+            return new_pr_on_tbland
+
+class MissingFromTribalLand(models.Model):
+    name = models.CharField(max_length=64)
+
+    def save(self, *args, **kwargs):
+        self.name = self.name.title()
+        super().save(args, kwargs)
+
+    def __str__(self) -> str:
+        return self.name
+
+    @staticmethod
+    def get_missing_from_tribal_land_from_str(missing_from_tbland_str):
+        if not missing_from_tbland_str:
+            return
+        missing_from_tbland_str = missing_from_tbland_str.title()
+        missing_from_tblands = MissingFromTribalLand.objects.all()
+        matching_mftbland = missing_from_tblands.filter(name=missing_from_tbland_str)
+        if matching_mftbland.count() > 1:
+            raise ValueError("There are duplicate mftlands in the database!")
+        elif matching_mftbland.count() == 1:
+            return matching_mftbland.first()
+        elif matching_mftbland.count() == 0:
+            new_mftbland = MissingFromTribalLand(name=missing_from_tbland_str)
+            new_mftbland.save()
+            return new_mftbland
+
+class FoundOnTribalLand(models.Model):
+    name = models.CharField(max_length=64)
+
+    def save(self, *args, **kwargs):
+        self.name = self.name.title()
+        super().save(args, kwargs)
+
+    def __str__(self) -> str:
+        return self.name
+
+    @staticmethod
+    def get_found_on_tbland_from_str(found_on_tbland_str):
+        if not found_on_tbland_str:
+            return
+        found_on_tbland_str = found_on_tbland_str.title()
+        found_on_tblands = FoundOnTribalLand.objects.all()
+        matching_found_on_tbland = found_on_tblands.filter(name=found_on_tbland_str)
+        if matching_found_on_tbland.count() > 1:
+            raise ValueError("There are duplicate mftlands in the database!")
+        elif matching_found_on_tbland.count() == 1:
+            return matching_found_on_tbland.first()
+        elif matching_found_on_tbland.count() == 0:
+            new_found_on_tbland = FoundOnTribalLand(name=found_on_tbland_str)
+            new_found_on_tbland.save()
+            return new_found_on_tbland
+
+
+
+class ConditionOfRemains(models.Model):
+    name = models.CharField(max_length=64)
+
+    def save(self, *args, **kwargs):
+        self.name = self.name.title()
+        super().save(args, kwargs)
+
+    def __str__(self) -> str:
+        return self.name
+
+    @staticmethod
+    def get_c_of_remains_from_str(c_of_remains_str):
+        if not c_of_remains_str:
+            return
+        c_of_remains_str = c_of_remains_str.title()
+        c_of_remains = ConditionOfRemains.objects.all()
+        matching_c_of_r = c_of_remains.filter(name=c_of_remains_str)
+        if matching_c_of_r.count() > 1:
+            raise ValueError("There are duplicate c_of_remains values in the database!")
+        elif matching_c_of_r.count() == 1:
+            return matching_c_of_r.first()
+        elif matching_c_of_r.count() == 0:
+            new_c_of_r = ConditionOfRemains(name=c_of_remains_str)
+            new_c_of_r.save()
+            return new_c_of_r
+
+class DetailsOfRecovery(models.Model):
+    condition_of_remains = models.ForeignKey(ConditionOfRemains, on_delete=models.CASCADE, related_name="recovery_details", null=True)
+    
+    head_not_recovered = models.BooleanField(blank=True, default=False)
+    torso_not_recovered = models.BooleanField(blank=True, default=False)
+    limbs_not_recovered = models.BooleanField(blank=True, default=False)
+    hands_not_recovered = models.BooleanField(blank=True, default=False)
+    all_parts_recovered = models.BooleanField(blank=True, default=False)
+    
+    def __str__(self) -> str:
+        res = "»» |======| DETAILS OF RECOVERY |======| ««\n"
+        res += f" » Condition of Remains: {self.condition_of_remains}\n"
+        if self.all_parts_recovered:
+            res += " » Recovery: All parts recovered\n"
+        else:
+            res += f" » Head Not Recovered: {self.head_not_recovered}\n"
+            res += f" » Torso Not Recovered: {self.head_not_recovered}\n"
+            res += f" » Limbs Not Recovered: {self.head_not_recovered}\n"
+            res += f" » Hands Not Recovered: {self.head_not_recovered}\n"
+    
+        return res
+
+
+    @staticmethod
+    def create_details_of_recovery(case_data):
+        details_of_recovery = DetailsOfRecovery(
+            condition_of_remains = ConditionOfRemains.get_c_of_remains_from_str(case_data[InternalReprKeysConfig.DETAILS_OF_RECOVERY][InternalReprKeysConfig.CONDITION_OF_REMAINS]),
+            
+            head_not_recovered = False if not case_data[InternalReprKeysConfig.DETAILS_OF_RECOVERY][InternalReprKeysConfig.HEAD_NOT_RECOVERED] else case_data[InternalReprKeysConfig.DETAILS_OF_RECOVERY][InternalReprKeysConfig.HEAD_NOT_RECOVERED],
+            torso_not_recovered = False if not case_data[InternalReprKeysConfig.DETAILS_OF_RECOVERY][InternalReprKeysConfig.TORSO_NOT_RECOVERED] else case_data[InternalReprKeysConfig.DETAILS_OF_RECOVERY][InternalReprKeysConfig.TORSO_NOT_RECOVERED],
+            limbs_not_recovered = False if not case_data[InternalReprKeysConfig.DETAILS_OF_RECOVERY][InternalReprKeysConfig.LIMBS_NOT_RECOVERED] else case_data[InternalReprKeysConfig.DETAILS_OF_RECOVERY][InternalReprKeysConfig.LIMBS_NOT_RECOVERED],
+            hands_not_recovered = False if not case_data[InternalReprKeysConfig.DETAILS_OF_RECOVERY][InternalReprKeysConfig.HANDS_NOT_RECOVERED] else case_data[InternalReprKeysConfig.DETAILS_OF_RECOVERY][InternalReprKeysConfig.HANDS_NOT_RECOVERED]
+        )
+        if (not details_of_recovery.head_not_recovered and 
+        not details_of_recovery.torso_not_recovered and 
+        not details_of_recovery.limbs_not_recovered and 
+        not details_of_recovery.hands_not_recovered):
+            details_of_recovery.all_parts_recovered = True
+        
+        details_of_recovery.save()
+        return details_of_recovery
+
+
+
+@enum.unique
+class CaseType(enum.Enum):
+    MP = "Missing Persons Case"
+    UID = "Unidentified Body Case"
+
+    @classmethod
+    def choices(cls):
+        return [(item.name, item.value) for item in cls]
+
+@enum.unique
+class SourceType(enum.Enum):
+    GOV_BACKED = "Government Backed"
+    PRIVATE = "Private"
+
+    @classmethod
+    def choices(cls):
+        return [(item.name, item.value) for item in cls]
+
+class Source(models.Model):
+    name = models.CharField(max_length=64)
+    source_type = models.CharField(max_length=256)
+
+    def save(self, *args, **kwargs):
+        self.name = self.name.lower()
+        return super().save()
+
+    def __str__(self) -> str:
+        return self.name
+    
+    @staticmethod
+    def get_src(src_name):
+        src_name = src_name.lower()
+        source = Source.objects.filter(name=src_name)
+        if source.count() > 1:
+            raise ValueError("Duplicate sources in the database.")
+        elif source.count() == 0:
+            return None
+        return source.first()
+
+class CaseSource(models.Model):
+    source = models.ForeignKey(Source, on_delete=models.CASCADE, related_name="related_cases")
+    link = models.CharField(max_length=4096)
+
+    def __str__(self) -> str:
+        return f" * {self.source} - {self.link}"
+
+class Image(models.Model):
+    poster_href = models.CharField(max_length=4096)
+    thumbnail_href = models.CharField(max_length=4096)
+    file_path = models.CharField(max_length=512, blank=True, default=InternalReprKeysConfig.STR_NONE)
+    
+    height_poster = models.IntegerField(null=True)
+    width_poster = models.IntegerField(null=True)
+    height_thumbnail = models.IntegerField(null=True)
+    width_thumbnail = models.IntegerField(null=True)
+    
+    download_link = models.CharField(max_length=4096, null=True)
+
+class CaseImages(models.Model):
+    default_image = models.ForeignKey(Image, on_delete=models.CASCADE, related_name="case_images_default")
+    other_images = models.ManyToManyField(Image, related_name="case_images_other")
+
+    @staticmethod
+    def create_case_images(case_images_data):
+        default_image = Image(
+            poster_href = case_images_data[InternalReprKeysConfig.DEFAULT_IMAGE_POSTER],
+            thumbnail_href = case_images_data[InternalReprKeysConfig.DEFAULT_IMAGE_THUMBNAIL]
+        )
+        default_image.save()
+
+        case_images = CaseImages(default_image=default_image)
+        case_images.save()
+
+        for image in case_images_data[InternalReprKeysConfig.OTHER_IMAGES]:
+            image_obj = Image(
+                poster_href = image[InternalReprKeysConfig.IMAGE_POSTER][InternalReprKeysConfig.HREF],
+                thumbnail_href = image[InternalReprKeysConfig.IMAGE_POSTER][InternalReprKeysConfig.HREF],
+                download_link = image[InternalReprKeysConfig.STR_DOWNLOAD],
+                height_poster = image[InternalReprKeysConfig.IMAGE_POSTER][InternalReprKeysConfig.RES_HEIGHT],
+                width_poster = image[InternalReprKeysConfig.IMAGE_POSTER][InternalReprKeysConfig.RES_WIDTH],
+                height_thumbnail = image[InternalReprKeysConfig.IMAGE_THUMBNAIL][InternalReprKeysConfig.RES_HEIGHT],
+                width_thumbnail = image[InternalReprKeysConfig.IMAGE_THUMBNAIL][InternalReprKeysConfig.RES_WIDTH]
+            )
+            image_obj.save()
+            case_images.other_images.add(image_obj)
+        
+        return case_images
+
+
+
 class DescriptiveItemCategory(models.Model):
     name = models.CharField(max_length=64)
 
@@ -615,17 +921,146 @@ class DescriptiveFeatureCategory(models.Model):
             new_category.save()
             return new_category
 
+
+
+class SubjectRelatedItems(models.Model):
+    def __str__(self) -> str:
+        res = ""
+        if self.clothing_and_accessories.count() > 0:
+            res += "\n»» |======| CLOTHING AND ACCESSORIES |======| ««\n\n"
+            for clothing_or_accessory in self.clothing_and_accessories.all():
+                res += "--------------------------------------------------------------------------------------------------------------------\n"
+                res += str(clothing_or_accessory) + '\n'
+        
+        if self.vehicles_info.count() > 0:
+            res += "\n»» |======| VEHICLES |======| ««\n"
+            for vehicle_info in self.vehicles_info.all():
+                res += "--------------------------------------------------------------------------------------------------------------------\n"
+                
+                res += f" » Tag Number: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.tag_number else vehicle_info.tag_number}\n"
+                res += f" » Tag State: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.tag_state else vehicle_info.tag_state}\n"
+                res += f" » Tag Year: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.vehicle_year else vehicle_info.vehicle_year}\n"
+                res += f" » Tag Expiration Year: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.tag_expiration_year else vehicle_info.tag_expiration_year}\n"
+                res += f" » Make: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.vehicle_make else vehicle_info.vehicle_make}\n"
+                res += f" » Model: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.vehicle_model else vehicle_info.vehicle_model}\n"
+                res += f" » Style: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.vehicle_style else vehicle_info.vehicle_style}\n"
+                res += f" » Color: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.vehicle_color else vehicle_info.vehicle_year}\n"
+
+                if vehicle_info.comment:
+                    res += f" * {vehicle_info.comment}\n"
+        
+        return res
+                
+    @staticmethod
+    def create_subject_related_items(case_data):
+        related_items = SubjectRelatedItems()
+        related_items.save()
+
+        for item_article in case_data[InternalReprKeysConfig.CLOTHING_AND_ACCESSORIES]:
+            item = DescriptiveItemArticle(
+                category = DescriptiveItemCategory.get_desc_item_category_from_str(item_article[InternalReprKeysConfig.STR_CATEGORY_NAME]),
+                description = item_article[InternalReprKeysConfig.STR_DESCRIPTION],
+
+                subject_related_items = related_items
+            )
+            item.save()
+
+        for vehicle_info in case_data[InternalReprKeysConfig.VEHICLES]:
+            vehicle = VehicleInformation(
+                vehicle_year = vehicle_info[InternalReprKeysConfig.VEHICLE_YEAR],
+                tag_expiration_year = vehicle_info[InternalReprKeysConfig.VEHICLE_TAG_EXPIRATION_YEAR],
+                
+                tag_state = State.get_state_from_str(vehicle_info[InternalReprKeysConfig.VEHICLE_TAG_STATE]),
+                tag_number = vehicle_info[InternalReprKeysConfig.VEHICLE_TAG_NUM],
+                comment = vehicle_info[InternalReprKeysConfig.VEHICLE_COMMENT],
+                
+                vehicle_make = VehicleMake.get_vehicle_make_from_str(vehicle_info[InternalReprKeysConfig.VEHICLE_MAKE]),
+                vehicle_model = VehicleModel.get_vehicle_model_from_str(vehicle_info[InternalReprKeysConfig.VEHICLE_MODEL]),
+                vehicle_style = VehicleStyle.get_vehicle_style_from_str(vehicle_info[InternalReprKeysConfig.VEHICLE_STYLE]),
+                vehicle_color = VehicleColor.get_vehicle_color_from_str(vehicle_info[InternalReprKeysConfig.VEHICLE_COLOR]),
+
+                subject_related_items = related_items
+            )
+            vehicle.save()
+        
+        return related_items
+
+class SubjectDescription(models.Model):
+
+    hair_color = models.ForeignKey(HairColor, on_delete=models.PROTECT, related_name="mp_subject_descriptions", null=True)
+    left_eye_color = models.ForeignKey(EyeColor, on_delete=models.PROTECT, related_name="mp_subject_left_eye_descriptions", null=True)
+    right_eye_color = models.ForeignKey(EyeColor, on_delete=models.PROTECT, related_name="mp_subject_right_eye_descriptions", null=True)
+    
+    head_hair_description = models.CharField(max_length=512, null=True)
+    body_hair_description = models.CharField(max_length=512, null=True)
+    facial_hair_description = models.CharField(max_length=512, null=True)
+    eye_description = models.CharField(max_length=512, null=True)
+
+    def __str__(self) -> str:
+        res = "»» |======| DESCRIPTION |======| ««\n"
+        res += f" » Hair Color: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.hair_color else self.hair_color}\n"
+        res += f" » Left Eye Color: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.left_eye_color else self.left_eye_color}\n"
+        res += f" » Right Eye Color: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.right_eye_color else self.right_eye_color}\n"
+    
+        res += f" » Head Hair Description: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.head_hair_description else self.head_hair_description}\n"
+        res += f" » Body Hair Description: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.body_hair_description else self.body_hair_description}\n"
+        res += f" » Facial Hair Description: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.facial_hair_description else self.facial_hair_description}\n"
+        res += f" » Eye Description: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.eye_description else self.eye_description}\n"
+
+        if self.distinctive_physical_features.count() > 0:
+            res += " »» Other Descriptive Features ««\n"
+            for feature in self.distinctive_physical_features.all():
+                res += str(feature)
+
+        return res
+    
+    @staticmethod
+    def create_subject_description(subject_description_data):
+        physical_features = subject_description_data[InternalReprKeysConfig.PHYSICAL_FEATURES]
+        
+        description = SubjectDescription(
+
+            hair_color = HairColor.get_hair_color_from_str(physical_features[InternalReprKeysConfig.HAIR_COLOR]),
+            left_eye_color = EyeColor.get_eye_color_from_str(physical_features[InternalReprKeysConfig.LEFT_EYE_COLOR]),
+            right_eye_color = EyeColor.get_eye_color_from_str(physical_features[InternalReprKeysConfig.RIGHT_EYE_COLOR]),
+
+            head_hair_description = physical_features[InternalReprKeysConfig.HEAD_HAIR_DESC],
+            body_hair_description = physical_features[InternalReprKeysConfig.BODY_HAIR_DESC],
+            facial_hair_description = physical_features[InternalReprKeysConfig.FACIAL_HAIR_DESC],
+            eye_description = physical_features[InternalReprKeysConfig.EYE_DESC],
+        )
+        description.save()
+        
+        for distinctive_physical_feature in subject_description_data[InternalReprKeysConfig.DISTINCTIVE_PHYSICAL_FEATURES]:
+            feature = DescriptiveFeatureArticle(
+                category = DescriptiveFeatureCategory.get_desc_feature_category_from_str(distinctive_physical_feature[InternalReprKeysConfig.STR_CATEGORY_NAME]),
+                description = distinctive_physical_feature[InternalReprKeysConfig.STR_DESCRIPTION],
+                subject_description = description
+            )
+            feature.save()
+        
+        description.save()
+        return description
+
+
+
 class DescriptiveItemArticle(models.Model):
     category = models.ForeignKey(DescriptiveItemCategory, on_delete=models.CASCADE, related_name="items")
     description = models.TextField(max_length=1000)
 
     subject_related_items = models.ForeignKey(SubjectRelatedItems, on_delete=models.CASCADE, related_name="clothing_and_accessories")
 
+    def __str__(self) -> str:
+        return f" » {self.category}: {self.description}"
+
 class DescriptiveFeatureArticle(models.Model):
     category = models.ForeignKey(DescriptiveFeatureCategory, on_delete=models.PROTECT, related_name="articles")
     description = models.TextField(max_length=1000)
 
     subject_description = models.ForeignKey(SubjectDescription, on_delete=models.CASCADE, related_name="distinctive_physical_features")
+
+    def __str__(self) -> str:
+        return f" » {self.category}: {self.description}"
 
 
 
@@ -748,386 +1183,7 @@ class VehicleInformation(models.Model):
     vehicle_color = models.ForeignKey(VehicleColor, on_delete=models.CASCADE, related_name="vehicles", null=True)
 
     subject_related_items = models.ForeignKey(SubjectRelatedItems, on_delete=models.CASCADE, related_name="vehicles_info")
-
-
-
-class Tribe(models.Model):
-    name = models.CharField(max_length=64)
-
-    def save(self, *args, **kwargs):
-        self.name = self.name.title()
-        super().save(args, kwargs)
-
-    def __str__(self) -> str:
-        return self.name
-
-    @staticmethod
-    def get_tribe_from_str(tribe_str):
-        if not tribe_str:
-            return
-        tribe_str = tribe_str.title()
-        tribes = Tribe.objects.all()
-        matching_tribe = tribes.filter(name=tribe_str)
-        if matching_tribe.count() > 1:
-            raise ValueError("There are duplicate tribes in the database!")
-        elif matching_tribe.count() == 1:
-            return matching_tribe.first()
-        elif matching_tribe.count() == 0:
-            new_tribe = Tribe(name=tribe_str)
-            new_tribe.save()
-            return new_tribe
-
-class TribalAffiliation(models.Model):
-    name = models.CharField(max_length=64)
-
-    def save(self, *args, **kwargs):
-        self.name = self.name.title()
-        super().save(args, kwargs)
-
-    def __str__(self) -> str:
-        return self.name
-
-    @staticmethod
-    def get_tribal_affiliation_from_str(affiliation_str):
-        if not affiliation_str:
-            return
-        affiliation_str = affiliation_str.title()
-        affiliations = TribalAffiliation.objects.all()
-        matching_affiliation = affiliations.filter(name=affiliation_str)
-        if matching_affiliation.count() > 1:
-            raise ValueError("There are duplicate tribal affiliations in the database!")
-        elif matching_affiliation.count() == 1:
-            return matching_affiliation.first()
-        elif matching_affiliation.count() == 0:
-            new_affiliation = TribalAffiliation(name=affiliation_str)
-            new_affiliation.save()
-            return new_affiliation
-
-class TribalAssociation(models.Model):
-    tribe = models.ForeignKey(Tribe, on_delete=models.CASCADE, related_name="associations")
-    is_enrolled = models.BooleanField(null=True)
-
-    def __str__(self) -> str:
-        res = f" * Tribe Name: {self.tribe.name}\n"
-        if self.is_enrolled is None:
-            res += f" * Enrollment: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
-        else:
-            if self.is_enrolled:
-                res += f" * Enrollment: {InternalReprKeysConfig.STR_YES}\n"
-            else:
-                res += f" * Enrollment: {InternalReprKeysConfig.STR_NO}\n"
-        return res
-
-class PrimaryResidenceOnTribalLand(models.Model):
-    name = models.CharField(max_length=64)
-
-    def save(self, *args, **kwargs):
-        self.name = self.name.title()
-        super().save(args, kwargs)
-
-    def __str__(self) -> str:
-        return self.name
-
-    @staticmethod
-    def get_primary_residence_on_tribal_land(primary_residence_on_tbland_str):
-        if not primary_residence_on_tbland_str:
-            return
-        primary_residence_on_tbland_str = primary_residence_on_tbland_str.title()
-        pr_on_tblands = PrimaryResidenceOnTribalLand.objects.all()
-        matching_pr_on_tbland = pr_on_tblands.filter(name=primary_residence_on_tbland_str)
-        if matching_pr_on_tbland.count() > 1:
-            raise ValueError("There are duplicate pr_on_tblands in the database!")
-        elif matching_pr_on_tbland.count() == 1:
-            return matching_pr_on_tbland.first()
-        elif matching_pr_on_tbland.count() == 0:
-            new_pr_on_tbland = PrimaryResidenceOnTribalLand(name=primary_residence_on_tbland_str)
-            new_pr_on_tbland.save()
-            return new_pr_on_tbland
-
-class MissingFromTribalLand(models.Model):
-    name = models.CharField(max_length=64)
-
-    def save(self, *args, **kwargs):
-        self.name = self.name.title()
-        super().save(args, kwargs)
-
-    def __str__(self) -> str:
-        return self.name
-
-    @staticmethod
-    def get_missing_from_tribal_land_from_str(missing_from_tbland_str):
-        if not missing_from_tbland_str:
-            return
-        missing_from_tbland_str = missing_from_tbland_str.title()
-        missing_from_tblands = MissingFromTribalLand.objects.all()
-        matching_mftbland = missing_from_tblands.filter(name=missing_from_tbland_str)
-        if matching_mftbland.count() > 1:
-            raise ValueError("There are duplicate mftlands in the database!")
-        elif matching_mftbland.count() == 1:
-            return matching_mftbland.first()
-        elif matching_mftbland.count() == 0:
-            new_mftbland = MissingFromTribalLand(name=missing_from_tbland_str)
-            new_mftbland.save()
-            return new_mftbland
-
-class FoundOnTribalLand(models.Model):
-    name = models.CharField(max_length=64)
-
-    def save(self, *args, **kwargs):
-        self.name = self.name.title()
-        super().save(args, kwargs)
-
-    def __str__(self) -> str:
-        return self.name
-
-    @staticmethod
-    def get_found_on_tbland_from_str(found_on_tbland_str):
-        if not found_on_tbland_str:
-            return
-        found_on_tbland_str = found_on_tbland_str.title()
-        found_on_tblands = FoundOnTribalLand.objects.all()
-        matching_found_on_tbland = found_on_tblands.filter(name=found_on_tbland_str)
-        if matching_found_on_tbland.count() > 1:
-            raise ValueError("There are duplicate mftlands in the database!")
-        elif matching_found_on_tbland.count() == 1:
-            return matching_found_on_tbland.first()
-        elif matching_found_on_tbland.count() == 0:
-            new_found_on_tbland = FoundOnTribalLand(name=found_on_tbland_str)
-            new_found_on_tbland.save()
-            return new_found_on_tbland
-
-
-
-class ConditionOfRemains(models.Model):
-    name = models.CharField(max_length=64)
-
-    def save(self, *args, **kwargs):
-        self.name = self.name.title()
-        super().save(args, kwargs)
-
-    def __str__(self) -> str:
-        return self.name
-
-    @staticmethod
-    def get_c_of_remains_from_str(c_of_remains_str):
-        if not c_of_remains_str:
-            return
-        c_of_remains_str = c_of_remains_str.title()
-        c_of_remains = ConditionOfRemains.objects.all()
-        matching_c_of_r = c_of_remains.filter(name=c_of_remains_str)
-        if matching_c_of_r.count() > 1:
-            raise ValueError("There are duplicate c_of_remains values in the database!")
-        elif matching_c_of_r.count() == 1:
-            return matching_c_of_r.first()
-        elif matching_c_of_r.count() == 0:
-            new_c_of_r = ConditionOfRemains(name=c_of_remains_str)
-            new_c_of_r.save()
-            return new_c_of_r
-
-class DetailsOfRecovery(models.Model):
-    condition_of_remains = models.ForeignKey(ConditionOfRemains, on_delete=models.CASCADE, related_name="recovery_details", null=True)
-    
-    head_not_recovered = models.BooleanField(blank=True, default=False)
-    torso_not_recovered = models.BooleanField(blank=True, default=False)
-    limbs_not_recovered = models.BooleanField(blank=True, default=False)
-    hands_not_recovered = models.BooleanField(blank=True, default=False)
-
-    @staticmethod
-    def create_details_of_recovery(case_data):
-        details_of_recovery = DetailsOfRecovery(
-            condition_of_remains = ConditionOfRemains.get_c_of_remains_from_str(case_data[InternalReprKeysConfig.DETAILS_OF_RECOVERY][InternalReprKeysConfig.CONDITION_OF_REMAINS]),
-            
-            head_not_recovered = False if not case_data[InternalReprKeysConfig.DETAILS_OF_RECOVERY][InternalReprKeysConfig.HEAD_NOT_RECOVERED] else case_data[InternalReprKeysConfig.DETAILS_OF_RECOVERY][InternalReprKeysConfig.HEAD_NOT_RECOVERED],
-            torso_not_recovered = False if not case_data[InternalReprKeysConfig.DETAILS_OF_RECOVERY][InternalReprKeysConfig.TORSO_NOT_RECOVERED] else case_data[InternalReprKeysConfig.DETAILS_OF_RECOVERY][InternalReprKeysConfig.TORSO_NOT_RECOVERED],
-            limbs_not_recovered = False if not case_data[InternalReprKeysConfig.DETAILS_OF_RECOVERY][InternalReprKeysConfig.LIMBS_NOT_RECOVERED] else case_data[InternalReprKeysConfig.DETAILS_OF_RECOVERY][InternalReprKeysConfig.LIMBS_NOT_RECOVERED],
-            hands_not_recovered = False if not case_data[InternalReprKeysConfig.DETAILS_OF_RECOVERY][InternalReprKeysConfig.HANDS_NOT_RECOVERED] else case_data[InternalReprKeysConfig.DETAILS_OF_RECOVERY][InternalReprKeysConfig.HANDS_NOT_RECOVERED]
-        )
-        details_of_recovery.save()
-        return details_of_recovery
-
-
-
-@enum.unique
-class CaseType(enum.Enum):
-    MP = "Missing Persons Case"
-    UID = "Unidentified Body Case"
-
-    @classmethod
-    def choices(cls):
-        return [(item.name, item.value) for item in cls]
-
-@enum.unique
-class SourceType(enum.Enum):
-    GOV_BACKED = "Government Backed"
-    PRIVATE = "Private"
-
-    @classmethod
-    def choices(cls):
-        return [(item.name, item.value) for item in cls]
-
-class Source(models.Model):
-    name = models.CharField(max_length=64)
-    source_type = models.CharField(max_length=256)
-
-    def save(self, *args, **kwargs):
-        self.name = self.name.lower()
-        return super().save()
-
-    def __str__(self) -> str:
-        return self.name
-    
-    @staticmethod
-    def get_src(src_name):
-        src_name = src_name.lower()
-        source = Source.objects.filter(name=src_name)
-        if source.count() > 1:
-            raise ValueError("Duplicate sources in the database.")
-        elif source.count() == 0:
-            return None
-        return source.first()
-
-class CaseSource(models.Model):
-    source = models.ForeignKey(Source, on_delete=models.CASCADE, related_name="related_cases")
-    link = models.CharField(max_length=4096)
-
-    def __str__(self) -> str:
-        return f" * {self.source} - {self.link}"
-
-class Image(models.Model):
-    poster_href = models.CharField(max_length=4096)
-    thumbnail_href = models.CharField(max_length=4096)
-    file_path = models.CharField(max_length=512, blank=True, default=InternalReprKeysConfig.STR_NONE)
-    
-    height_poster = models.IntegerField(null=True)
-    width_poster = models.IntegerField(null=True)
-    height_thumbnail = models.IntegerField(null=True)
-    width_thumbnail = models.IntegerField(null=True)
-    
-    download_link = models.CharField(max_length=4096, null=True)
-
-class CaseImages(models.Model):
-    default_image = models.ForeignKey(Image, on_delete=models.CASCADE, related_name="case_images_default")
-    other_images = models.ManyToManyField(Image, related_name="case_images_other")
-
-    @staticmethod
-    def create_case_images(case_images_data):
-        default_image = Image(
-            poster_href = case_images_data[InternalReprKeysConfig.DEFAULT_IMAGE_POSTER],
-            thumbnail_href = case_images_data[InternalReprKeysConfig.DEFAULT_IMAGE_THUMBNAIL]
-        )
-        default_image.save()
-
-        case_images = CaseImages(default_image=default_image)
-        case_images.save()
-
-        for image in case_images_data[InternalReprKeysConfig.OTHER_IMAGES]:
-            image_obj = Image(
-                poster_href = image[InternalReprKeysConfig.IMAGE_POSTER][InternalReprKeysConfig.HREF],
-                thumbnail_href = image[InternalReprKeysConfig.IMAGE_POSTER][InternalReprKeysConfig.HREF],
-                download_link = image[InternalReprKeysConfig.STR_DOWNLOAD],
-                height_poster = image[InternalReprKeysConfig.IMAGE_POSTER][InternalReprKeysConfig.RES_HEIGHT],
-                width_poster = image[InternalReprKeysConfig.IMAGE_POSTER][InternalReprKeysConfig.RES_WIDTH],
-                height_thumbnail = image[InternalReprKeysConfig.IMAGE_THUMBNAIL][InternalReprKeysConfig.RES_HEIGHT],
-                width_thumbnail = image[InternalReprKeysConfig.IMAGE_THUMBNAIL][InternalReprKeysConfig.RES_WIDTH]
-            )
-            image_obj.save()
-            case_images.other_images.add(image_obj)
-        
-        return case_images
-
-
-
-class SubjectRelatedItems(models.Model):
-    def __str__(self) -> str:
-        res = ""
-        if self.clothing_and_accessories.count() > 0:
-            res += "\n>> |======|CLOTHING AND ACCESSORIES|======| <<\n"
-            for clothing_or_accessory in self.clothing_and_accessories.all():
-                res += f"* {clothing_or_accessory.category.name} - {clothing_or_accessory.description}\n"
-        
-        if self.vehicles_info.count() > 0:
-            res += "\n>> |======|VEHICLES|======| <<\n"
-            for vehicle_info in self.vehicles_info.all():
-                res += "---\n"
-                res += f" > Tag Number: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.tag_number else vehicle_info.tag_number}\n"
-                res += f" > Tag State: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.tag_state else vehicle_info.tag_state}\n"
-                res += f" > Tag Year: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.vehicle_year else vehicle_info.vehicle_year}\n"
-                res += f" > Tag Expiration Year: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.tag_expiration_year else vehicle_info.tag_expiration_year}\n"
-
-                res += f" > Make: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.vehicle_make else vehicle_info.vehicle_make}\n"
-                res += f" > Model: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.vehicle_model else vehicle_info.vehicle_model}\n"
-                res += f" > Style: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.vehicle_style else vehicle_info.vehicle_style}\n"
-                res += f" > Color: {InternalReprKeysConfig.STR_NOT_PROVIDED if not vehicle_info.vehicle_color else vehicle_info.vehicle_year}\n"
-
-                if vehicle_info.comment:
-                    res += f" * {vehicle_info.comment}\n"
-
-                res += "---"
-        return res
-                
-    @staticmethod
-    def create_subject_related_items(subject_related_items_data):
-        related_items = SubjectRelatedItems()
-        related_items.save()
-
-        for item_article in subject_related_items_data[InternalReprKeysConfig.CLOTHING_AND_ACCESSORIES]:
-            item = DescriptiveItemArticle(
-                category = DescriptiveItemCategory.get_desc_item_category_from_str(item_article[InternalReprKeysConfig.STR_CATEGORY_NAME]),
-                description = item_article[InternalReprKeysConfig.STR_DESCRIPTION],
-
-                subject_related_items = related_items
-            )
-            item.save()
-
-        for vehicle_info in subject_related_items_data[InternalReprKeysConfig.VEHICLES]:
-            vehicle = VehicleInformation(
-                vehicle_year = vehicle_info[InternalReprKeysConfig.VEHICLE_YEAR],
-                tag_expiration_year = vehicle_info[InternalReprKeysConfig.VEHICLE_TAG_EXPIRATION_YEAR],
-                
-                tag_state = State.get_state_from_str(vehicle_info[InternalReprKeysConfig.VEHICLE_TAG_STATE]),
-                tag_number = vehicle_info[InternalReprKeysConfig.VEHICLE_TAG_NUM],
-                comment = vehicle_info[InternalReprKeysConfig.VEHICLE_COMMENT],
-                
-                vehicle_make = VehicleMake.get_vehicle_make_from_str(vehicle_info[InternalReprKeysConfig.VEHICLE_MAKE]),
-                vehicle_model = VehicleModel.get_vehicle_model_from_str(vehicle_info[InternalReprKeysConfig.VEHICLE_MODEL]),
-                vehicle_style = VehicleStyle.get_vehicle_style_from_str(vehicle_info[InternalReprKeysConfig.VEHICLE_STYLE]),
-                vehicle_color = VehicleColor.get_vehicle_color_from_str(vehicle_info[InternalReprKeysConfig.VEHICLE_COLOR]),
-
-                subject_related_items = related_items
-            )
-            vehicle.save()
-        
-        return related_items
-
-class SubjectDescription(models.Model):
-
-    hair_color = models.ForeignKey(HairColor, on_delete=models.PROTECT, related_name="mp_subject_descriptions", null=True)
-    left_eye_color = models.ForeignKey(EyeColor, on_delete=models.PROTECT, related_name="mp_subject_left_eye_descriptions", null=True)
-    right_eye_color = models.ForeignKey(EyeColor, on_delete=models.PROTECT, related_name="mp_subject_right_eye_descriptions", null=True)
-    
-    head_hair_description = models.CharField(max_length=512, null=True)
-    body_hair_description = models.CharField(max_length=512, null=True)
-    facial_hair_description = models.CharField(max_length=512, null=True)
-    eye_description = models.CharField(max_length=512, null=True)
-
-    def __str__(self) -> str:
-        res = "\n\n>> |======|DESCRIPTION|======| <<\n"
-        res += f" > Hair Color: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.hair_color else self.hair_color}\n"
-        res += f" > Left Eye Color: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.left_eye_color else self.left_eye_color}\n"
-        res += f" > Right Eye Color: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.right_eye_color else self.right_eye_color}\n"
-        
-        res += f" > Head Hair Description: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.head_hair_description else self.head_hair_description}\n"
-        res += f" > Body Hair Description: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.body_hair_description else self.body_hair_description}\n"
-        res += f" > Facial Hair Description: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.facial_hair_description else self.facial_hair_description}\n"
-        res += f" > Eye Description: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.eye_description else self.eye_description}\n"
-
-        if self.distinctive_physical_features.count() > 0:
-            res += " >> Other Descriptive Features <<\n"
-            for feature in self.distinctive_physical_features.all():
-                res += f" * {feature.category.name} - {feature.description}\n"
-
-        return res
-
+ 
 
 
 class MPSubjectDemographics(models.Model):
@@ -1150,68 +1206,69 @@ class MPSubjectDemographics(models.Model):
     tribal_associations = models.ManyToManyField(TribalAssociation, related_name="mp_subject_demographics")
 
     def __str__(self) -> str:
-        res = "\n>> |======|DEMOGRAPHICS|======| <<\n"
+        res = "»» |======| DEMOGRAPHICS |======| ««\n\n"
         
         if self.missing_min_age and self.missing_max_age:
             if self.missing_min_age == self.missing_max_age:
-                res += f" > Missing Age: {self.missing_min_age}\n"
+                res += f" » Missing Age: {self.missing_min_age}\n"
             else:
-                res += f" > Missing Age: {self.missing_min_age} - {self.missing_max_age}\n"
+                res += f" » Missing Age: {self.missing_min_age} - {self.missing_max_age}\n"
         
         elif not self.missing_min_age and not self.missing_max_age:
-            res += f" > Missing Age: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
+            res += f" » Missing Age: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
         else:
-            res += f" > Missing Age: {self.missing_min_age if self.missing_min_age else self.missing_max_age}\n"
+            res += f" » Missing Age: {self.missing_min_age if self.missing_min_age else self.missing_max_age}\n"
 
         if self.current_min_age and self.current_max_age:
             if self.current_min_age == self.current_max_age:
-                res += f" > Current Age: {self.current_min_age}\n"
+                res += f" » Current Age: {self.current_min_age}\n"
             else:
-                res += f" > Current Age: {self.current_min_age} - {self.current_max_age}\n"
+                res += f" » Current Age: {self.current_min_age} - {self.current_max_age}\n"
         
         elif not self.current_min_age and not self.current_max_age:
-            res += f" > Current Age: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
+            res += f" » Current Age: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
         else:
-            res += f" > Current Age: {self.current_min_age if self.current_min_age else self.current_max_age}\n"
+            res += f" » Current Age: {self.current_min_age if self.current_min_age else self.current_max_age}\n"
 
         if self.height_from_inches and self.height_to_inches:
-            res += f" > Height: {self.height_from_inches} - {self.height_to_inches} inches\n"
+            res += f" » Height: {self.height_from_inches} - {self.height_to_inches} inches\n"
         elif not self.height_from_inches and not self.height_to_inches:
-            res += f" > Height: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
+            res += f" » Height: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
         else:
-            res += f" > Height: {self.height_from_inches if self.height_from_inches else self.height_to_inches} inches\n"
+            res += f" » Height: {self.height_from_inches if self.height_from_inches else self.height_to_inches} inches\n"
         
         if self.weight_from_lbs and self.weight_to_lbs:
-            res += f" > Weight: {self.weight_from_lbs} - {self.weight_to_lbs} lbs\n"
+            res += f" » Weight: {self.weight_from_lbs} - {self.weight_to_lbs} lbs\n"
         elif not self.weight_from_lbs and not self.weight_to_lbs:
-            res += f" > Weight: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
+            res += f" » Weight: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
         else:
-            res += f" > Weight: {self.weight_from_lbs if self.weight_from_lbs else self.weight_to_lbs} inches\n"
+            res += f" » Weight: {self.weight_from_lbs if self.weight_from_lbs else self.weight_to_lbs} inches\n"
 
         if not self.gender:
-            res += f" > Gender: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
+            res += f" » Gender: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
         else:
-            res += f" > Gender: {self.gender}\n"
+            res += f" » Gender: {self.gender}\n"
 
         if not self.primary_ethnicity:
-            res += f" > Primary Ethnicity: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
+            res += f" » Primary Ethnicity: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
         else:
-            res += f" > Primary Ethnicity: {str(self.primary_ethnicity)}\n"
+            res += f" » Primary Ethnicity: {str(self.primary_ethnicity)}\n"
         
         if self.ethnicities.count() > 1:
-            res += " >> All Ethnicities <<\n"
+            res += " »» All Ethnicities ««\n"
             for ethnicity in self.ethnicities.all():
                 res += f" * {ethnicity}\n"
         
         if not self.tribal_affiliation:
-            res += f" > Tribal Affiliation: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
+            res += f" » Tribal Affiliation: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
         else:
-            res += f" > Tribal Affiliation: {str(self.tribal_affiliation)}\n"
+            res += f" » Tribal Affiliation: {str(self.tribal_affiliation)}\n"
 
         if self.tribal_associations.count() > 0:
-            res += " >> Tribal Associations <<\n"
+            res += " »» Tribal Associations ««\n"
             for tribe_association in self.tribal_associations.all():
-                res += f"---\n{str(tribe_association)}---"
+                res += "--------------------------------------------------------------------------------------------------------------------\n"
+                res += str(tribe_association) + '\n'
         
         return res  
 
@@ -1295,11 +1352,11 @@ class MPSubjectIdentification(models.Model):
     nicknames = models.CharField(null=True, max_length=1024)
 
     def __str__(self) -> str:
-        res = "\n\n>> |======|IDENTIFICATION|======| <<\n"
-        res += f" > First Name: {self.first_name}\n"
-        res += f" > Middle Name: {InternalReprKeysConfig.STR_NONE if not self.middle_name else self.middle_name}\n"
-        res += f" > Last Name: {self.last_name}\n"
-        res += f" > Nicknames: {InternalReprKeysConfig.STR_NONE if not self.nicknames else self.nicknames}\n"
+        res = "»» |======| IDENTIFICATION |======| ««\n\n"
+        res += f" » First Name: {self.first_name}\n"
+        res += f" » Middle Name: {InternalReprKeysConfig.STR_NONE if not self.middle_name else self.middle_name}\n"
+        res += f" » Last Name: {self.last_name}\n"
+        res += f" » Nicknames: {InternalReprKeysConfig.STR_NONE if not self.nicknames else self.nicknames}\n"
         return res
     
     @staticmethod
@@ -1353,40 +1410,50 @@ class MPCase(models.Model):
         res = "\n\n***---------------------------------------------------------------------------------------------------------------------***\n"
         res += f"                 {self.case_type} - {self.case_id} ({self.primary_source})\n"
         res += "***---------------------------------------------------------------------------------------------------------------------***\n"
-        res += "\n>> |======|META|======| <<\n"
-        res += f" > NamUs Id: {self.namus_id_formatted}\n"
-        if self.ncmec_number:
-            res += f" > NCMEC Number: {self.namus_id_formatted}\n"
-        res += f" > Case Created (Internal) - {self.case_internal_created} | Case Created(Source) - {self.case_created}\n"
-        res += f" > Case Last Modified(Source) - {self.case_last_modified}\n"
-        res += f" > Resolved: {self.is_resolved} | Archived: {self.is_archived}"
         
+        res += "\n»» |======| META |======| ««\n\n"
+        res += f" » NamUs Id: {self.namus_id_formatted}\n"
+        
+        if self.ncmec_number:
+            res += f" » NCMEC Number: {self.namus_id_formatted}\n"
+        res += f" » Case Created (Internal):{self.case_internal_created}\n"
+        res += f" » Case Created (Source): {self.case_created}\n"
+        res += f" » Case Last Modified (Source): {self.case_last_modified}\n"
+        res += f" » Resolved: {self.is_resolved}\n"
+        res += f" » Archived: {self.is_archived}\n"
+        
+        res += "\n"
         res += str(self.identification)
+        res += "\n"
         res += str(self.demographics)
-        res += f" > Primary Residence On Tribal Land: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.primary_residence_on_tribal_land else self.primary_residence_on_tribal_land}\n"
-        res += f" > Missing From Tribal Land: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.missing_from_tribal_land else self.missing_from_tribal_land}\n"
+        
+        res += "\n"
+        res += f" » Primary Residence On Tribal Land: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.primary_residence_on_tribal_land else self.primary_residence_on_tribal_land}\n"
+        res += f" » Missing From Tribal Land: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.missing_from_tribal_land else self.missing_from_tribal_land}"
+        
+        res += "\n"
         res += str(self.related_items)
 
-        res += f"\n>> |======|CIRCUMSTANCES OF DISAPPEARANCE|======| <<\n"
-        res += f" > {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.circumstances_of_disappearance else self.circumstances_of_disappearance}\n"
+        res += f"\n»» |======| CIRCUMSTANCES OF DISAPPEARANCE |======| ««\n\n"
+        res += f" » {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.circumstances_of_disappearance else self.circumstances_of_disappearance}\n"
         res += str(self.last_known_location)
         
-        res += f"\n>> |======|AGENCIES|======| <<\n"
-        res += f" > Primary Investigating Agency"
-        res += str(self.primary_investigating_agency)
-        if self.secondary_investigating_agencies.count() > 0:
-            res += f" >> Secondary Investigating Agencies <<\n"
-            for secondary_agency in self.secondary_investigating_agencies.all():
-                res += "---\n"
-                res += str(secondary_agency)
-                res += "---\n"
+        res += f"\n\n»» |======| AGENCIES |======| ««\n\n"
+        res += f" » Primary Investigating Agency «\n"
+        res += str(self.primary_investigating_agency) if self.primary_investigating_agency else ' » ' + InternalReprKeysConfig.STR_NOT_PROVIDED + '\n'
         
-        res += f"\n>> |======|SOURCES|======| <<\n"
-        res += f" > Primary Source: {self.primary_source}\n"
+        if self.secondary_investigating_agencies.count() > 0:
+            res += f" »» Secondary Investigating Agencies ««\n"
+            for secondary_agency in self.secondary_investigating_agencies.all():
+                res += "--------------------------------------------------------------------------------------------------------------------\n"
+                res += str(secondary_agency) + '\n'
+        
+        res += f"\n\n»» |======| SOURCES |======| ««\n\n"
+        res += f" » Primary Source: {self.primary_source}\n"
         if self.secondary_sources.count() > 0:
-            res += ">> Secondary Sources <<\n"
+            res += " »» Secondary Sources ««\n"
             for secondary_source in self.secondary_sources.all():
-                res += f" * {secondary_source}\n"
+                res += f" » {secondary_source}\n"
         return res
             
     @staticmethod 
@@ -1480,11 +1547,11 @@ class UIDSubjectIdentification(models.Model):
     possible_nicknames = models.CharField(max_length=1024, null=True)
 
     def __str__(self) -> str:
-        res = "\n\n>> |======|IDENTIFICATION|======| <<\n"
-        res += f" > First Name: {self.possible_first_name}\n"
-        res += f" > Middle Name: {InternalReprKeysConfig.STR_NONE if not self.possible_middle_name else self.possible_middle_name}\n"
-        res += f" > Last Name: {self.possible_last_name}\n"
-        res += f" > Nicknames: {InternalReprKeysConfig.STR_NONE if not self.possible_nicknames else self.possible_nicknames}\n"
+        res = "»» |======| IDENTIFICATION |======| ««\n\n"
+        res += f" » Possible First Name: {self.possible_first_name}\n"
+        res += f" » Possible Middle Name: {InternalReprKeysConfig.STR_NONE if not self.possible_middle_name else self.possible_middle_name}\n"
+        res += f" » Possible Last Name: {self.possible_last_name}\n"
+        res += f" » Possible Nicknames: {InternalReprKeysConfig.STR_NONE if not self.possible_nicknames else self.possible_nicknames}\n"
         return res
     
     @staticmethod
@@ -1523,34 +1590,55 @@ class UIDSubjectDemographics(models.Model):
 
 
     def __str__(self) -> str:
-        res = "\n>> |======|DEMOGRAPHICS|======| <<\n"
-
-        if self.height_from_inches and self.height_to_inches:
-            res += f" > Height: {self.height_from_inches} - {self.height_to_inches} inches\n"
-        elif not self.height_from_inches and not self.height_to_inches:
-            res += f" > Height: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
+        res = " »» |======| DEMOGRAPHICS |======| ««\n\n"
+        res += f" » Estimated Age Group: {self.estimated_age_group}\n"
+        if self.estimated_age_from and self.estimated_age_to:
+            res += f" » Estimated Age: {self.estimated_age_from} - {self.estimated_age_to}\n"
+        elif not self.estimated_age_from and not self.estimated_age_to:
+            res += f" » Estimated Age: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
         else:
-            res += f" > Height: {self.height_from_inches if self.height_from_inches else self.height_to_inches} inches\n"
+            res += f" » Estimated Age: {self.estimated_age_from if self.estimated_age_from else self.estimated_age_to}\n"
+
+        if self.estimated_year_of_birth_from and self.estimated_year_of_birth_to:
+            res += f" » Estimated Year of Birth: {self.estimated_year_of_birth_from} - {self.estimated_year_of_birth_to}\n"
+        elif not self.estimated_year_of_birth_from and not self.estimated_year_of_birth_to:
+            res += f" » Estimated Year of Birth: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
+        else:
+            res += f" » Estimated Year of Birth: {self.estimated_year_of_birth_from if self.estimated_year_of_birth_from else self.estimated_year_of_birth_to}\n" 
+
+        if self.estimated_year_of_death_from and self.estimated_year_of_death_to:
+            res += f" » Estimated Year of Death: {self.estimated_year_of_birth_from} - {self.estimated_year_of_death_to}\n"
+        elif not self.estimated_year_of_death_from and not self.estimated_year_of_death_to:
+            res += f" » Estimated Year of Death: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
+        else:
+            res += f" » Estimated Age: {self.estimated_year_of_death_from if self.estimated_year_of_death_from else self.estimated_year_of_death_to}\n"
+        
+        if self.height_from_inches and self.height_to_inches:
+            res += f" » Height: {self.height_from_inches} - {self.height_to_inches} inches ({self.height_certainty})\n"
+        elif not self.height_from_inches and not self.height_to_inches:
+            res += f" » Height: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
+        else:
+            res += f" » Height: {self.height_from_inches if self.height_from_inches else self.height_to_inches} inches ({self.height_certainty})\n"
         
         if self.weight_from_lbs and self.weight_to_lbs:
-            res += f" > Weight: {self.weight_from_lbs} - {self.weight_to_lbs} lbs\n"
+            res += f" » Weight: {self.weight_from_lbs} - {self.weight_to_lbs} lbs ({self.weight_certainty})\n"
         elif not self.weight_from_lbs and not self.weight_to_lbs:
-            res += f" > Weight: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
+            res += f" » Weight: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
         else:
-            res += f" > Weight: {self.weight_from_lbs if self.weight_from_lbs else self.weight_to_lbs} inches\n"
+            res += f" » Weight: {self.weight_from_lbs if self.weight_from_lbs else self.weight_to_lbs} lbs ({self.weight_certainty})\n"
 
         if not self.gender:
-            res += f" > Gender: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
+            res += f" » Gender: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
         else:
-            res += f" > Gender: {self.gender}\n"
+            res += f" » Gender: {self.gender}\n"
 
         if not self.primary_ethnicity:
-            res += f" > Primary Ethnicity: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
+            res += f" » Primary Ethnicity: {InternalReprKeysConfig.STR_NOT_PROVIDED}\n"
         else:
-            res += f" > Primary Ethnicity: {str(self.primary_ethnicity)}\n"
+            res += f" » Primary Ethnicity: {str(self.primary_ethnicity)}\n"
         
         if self.ethnicities.count() > 1:
-            res += " >> All Ethnicities <<\n"
+            res += " »» All Ethnicities ««\n"
             for ethnicity in self.ethnicities.all():
                 res += f" * {ethnicity}\n"
         
@@ -1597,37 +1685,87 @@ class UIDSubjectDemographics(models.Model):
 class UIDCase(models.Model):
     case_type = models.CharField(max_length=64, blank=True, editable=False, default=CaseType.UID)
     case_id = models.CharField(max_length=64, editable=False, unique=True, db_index=True)
-    case_images = models.ForeignKey(CaseImages, on_delete=models.PROTECT, related_name="uid_case")
     
     case_internal_created = models.DateField(auto_now=True)
     case_created = models.DateField()
     case_last_modified = models.DateField()
+    date_found = models.DateField(max_length=256, null=True)
     
     namus_id = models.CharField(max_length=256)
     namus_id_formatted = models.CharField(max_length=256)
     ncmec_number = models.CharField(max_length=256, null=True)
 
-    primary_source = models.ForeignKey(CaseSource, on_delete=models.PROTECT, related_name="uid_cases_primary")
-    secondary_sources = models.ManyToManyField(CaseSource, related_name="uid_cases_secondary")
-
     description = models.OneToOneField(SubjectDescription, on_delete=models.PROTECT, related_name="uid_case")
     related_items = models.OneToOneField(SubjectRelatedItems, on_delete=models.PROTECT, related_name="uid_case")
     identification = models.OneToOneField(UIDSubjectIdentification, on_delete=models.PROTECT, related_name="uid_case")
     demographics = models.OneToOneField(UIDSubjectDemographics, on_delete=models.PROTECT, related_name="uid_case")
+    details_of_recovery = models.OneToOneField(DetailsOfRecovery, on_delete=models.PROTECT, related_name="uid_case")
+
+    case_images = models.ForeignKey(CaseImages, on_delete=models.PROTECT, related_name="uid_case")
+    status = models.ForeignKey(UIDStatus, on_delete=models.CASCADE, related_name="uid_cases", null=True)
+    location_found = models.ForeignKey(Location, on_delete=models.CASCADE, related_name="uid_cases", null=True)
+    found_on_tribal_land = models.ForeignKey(FoundOnTribalLand, on_delete=models.PROTECT, related_name="uid_cases", null=True)
+    primary_investigating_agency = models.ForeignKey(InvestigatingAgencyData, on_delete=models.PROTECT, related_name="uid_cases_primary", null=True)
+    secondary_investigating_agencies = models.ManyToManyField(InvestigatingAgencyData, related_name="uid_cases_secondary")
+    primary_source = models.ForeignKey(CaseSource, on_delete=models.PROTECT, related_name="uid_cases_primary")
+    
+    secondary_sources = models.ManyToManyField(CaseSource, related_name="uid_cases_secondary")
 
     circumstances_of_recovery = models.TextField(max_length=10000, null=True)
-    details_of_recovery = models.OneToOneField(Location, on_delete=models.CASCADE, related_name="uid_case", null=True)
-    status = models.ForeignKey(UIDStatus, on_delete=models.PROTECT, related_name="uid_cases", null=True)
-    location_found = models.ForeignKey(Location, on_delete=models.CASCADE, related_name="uid_cases", null=True)
-    date_found = models.CharField(max_length=256)
 
     is_resolved = models.BooleanField(null=True)
     is_archived = models.BooleanField(blank=True, default=False)
 
-    found_on_tribal_land = models.ForeignKey(FoundOnTribalLand, on_delete=models.PROTECT, related_name="uid_cases", null=True)
-    
-    primary_investigating_agency = models.ForeignKey(InvestigatingAgencyData, on_delete=models.PROTECT, related_name="uid_cases_primary", null=True)
-    secondary_investigating_agencies = models.ManyToManyField(InvestigatingAgencyData, related_name="uid_cases_secondary")
+    def __str__(self) -> str:
+        res = "\n\n***---------------------------------------------------------------------------------------------------------------------***\n"
+        res += f"                 {self.case_type} - {self.case_id} ({self.primary_source})\n"
+        res += "***---------------------------------------------------------------------------------------------------------------------***\n"
+        
+        res += "\n»» |======| META |======| ««\n\n"
+        res += f" » NamUs Id: {self.namus_id_formatted}\n"
+        
+        if self.ncmec_number:
+            res += f" » NCMEC Number: {self.namus_id_formatted}\n"
+        res += f" » Case Created (Internal): {self.case_internal_created}\n"
+        res += f" » Case Created (Source): {self.case_created}\n"
+        res += f" » Case Last Modified (Source): {self.case_last_modified}\n"
+        res += f" » Resolved: {self.is_resolved}\n"
+        res += f" » Archived: {self.is_archived}\n"
+        
+        res += "\n"
+        res += str(self.identification)
+        res += "\n"
+        res += str(self.demographics)
+        
+        res += "\n"
+        res += f" » Found On Tribal Land: {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.found_on_tribal_land else self.found_on_tribal_land}"
+        
+        
+        res += "\n"
+        res += str(self.related_items)
+
+        res += f"\n»» |======| CIRCUMSTANCES OF RECOVERY |======| ««\n\n"
+        res += f" » {InternalReprKeysConfig.STR_NOT_PROVIDED if not self.circumstances_of_recovery else self.circumstances_of_recovery}\n"
+        res += str(self.location_found)
+        
+        res += f"\n\n»» |======| AGENCIES |======| ««\n\n"
+        res += f" » Primary Investigating Agency «\n"
+        res += str(self.primary_investigating_agency) if self.primary_investigating_agency else ' » ' + InternalReprKeysConfig.STR_NOT_PROVIDED + '\n'
+        
+        if self.secondary_investigating_agencies.count() > 0:
+            res += f" »» Secondary Investigating Agencies ««\n"
+            for secondary_agency in self.secondary_investigating_agencies.all():
+                res += "--------------------------------------------------------------------------------------------------------------------\n"
+                res += str(secondary_agency) + '\n'
+        
+        res += f"\n\n»» |======| SOURCES |======| ««\n"
+        res += f" » Primary Source: {self.primary_source}\n"
+        if self.secondary_sources.count() > 0:
+            res += " »» Secondary Sources ««\n"
+            for secondary_source in self.secondary_sources.all():
+                res += f" » {secondary_source}\n"
+        return res
+
 
     @staticmethod
     def create_uid_case(case_data):
@@ -1638,6 +1776,7 @@ class UIDCase(models.Model):
         identification = UIDSubjectIdentification.create_uid_identification(case_data)
         description = SubjectDescription.create_subject_description(case_data)
         subject_related_items = SubjectRelatedItems.create_subject_related_items(case_data)
+        details_of_recovery = DetailsOfRecovery.create_details_of_recovery(case_data)
         case_images = CaseImages.create_case_images(case_data) 
         location = Location(
             state = State.get_state_from_str(case_data[InternalReprKeysConfig.LOCATION_DATA][InternalReprKeysConfig.STATE]),
@@ -1655,6 +1794,7 @@ class UIDCase(models.Model):
         case = UIDCase(
             case_id = f"C_UID{CaseStats.UID_CASE_COUNT}",      
             case_images = case_images,
+            
             namus_id = case_data[InternalReprKeysConfig.NAMUS_ID],
             namus_id_formatted = case_data[InternalReprKeysConfig.NAMUS_ID_FORMATTED],
             ncmec_number = case_data[InternalReprKeysConfig.NCMEC_NUM],
@@ -1665,6 +1805,8 @@ class UIDCase(models.Model):
 
             circumstances_of_recovery = case_data[InternalReprKeysConfig.CICUMSTANCES_OF_RECOVERY],
             location_found = location,
+            details_of_recovery = details_of_recovery,
+            status = UIDStatus.get_uid_status_from_str(case_data[InternalReprKeysConfig.UID_STATUS]),
             is_resolved = case_data[InternalReprKeysConfig.CASE_RESOLVED],
 
             identification = identification,

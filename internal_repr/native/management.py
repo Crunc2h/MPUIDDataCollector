@@ -17,5 +17,5 @@ def test_all():
     reset_db()
     namus = Source(name="namus", source_type=SourceType.GOV_BACKED)
     namus.save()
-    fetch_case_data("MissingPersons")
     fetch_case_data("UnidentifiedPersons")
+    fetch_case_data("MissingPersons")

@@ -197,7 +197,7 @@ def filter_uid_json_for_internal_repr(json):
 
     case_data[InternalReprKeysConfig.DT_SOURCE_CREATED] = datetime.datetime.strptime(json["createdDateTime"].split("T")[0], "%Y-%m-%d")
     case_data[InternalReprKeysConfig.DT_SOURCE_LAST_MODIFIED] = datetime.datetime.strptime(json["modifiedDateTime"].split("T")[0], "%Y-%m-%d")
-    case_data[InternalReprKeysConfig.DT_BODY_FOUND] = None if not json.get("circumstances", {}).get("dateFound") else datetime.datetime.strptime(json.get("circumstances", {}).get("dateFound"), "%Y-%m-%d"),
+    case_data[InternalReprKeysConfig.DT_BODY_FOUND] = None if not json.get("circumstances", {}).get("dateFound") else datetime.datetime.strptime(json.get("circumstances", {}).get("dateFound"), "%Y-%m-%d")
     case_data[InternalReprKeysConfig.CICUMSTANCES_OF_RECOVERY] = json.get("circumstances", {}).get("circumstancesOfRecovery")
     case_data[InternalReprKeysConfig.UID_STATUS] = json.get("circumstances", {}).get("status", {}).get("name")
     case_data[InternalReprKeysConfig.CASE_RESOLVED] = json.get("caseIsResolved")
