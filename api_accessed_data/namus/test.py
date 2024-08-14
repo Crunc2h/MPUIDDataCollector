@@ -1,5 +1,5 @@
 import grequests, requests, json, functools, traceback
-from internal_repr.models import MPCase, UIDCase
+from internal_repr.models import MPCase, UIDCase, CaseBatch
 from .filters import filter_mp_json_for_internal_repr, filter_uid_json_for_internal_repr
 SEARCH_LIMIT = 10000
 REQUEST_BATCH_SIZE = 50
@@ -16,7 +16,7 @@ CASE_TYPES = {
     "UnclaimedPersons": {"stateField": "stateFound"},
 }
 
-
+CASE_BATCH_HANDLER = CaseBatch.objects.first()
 def fetch_case_data(case_type_r):
     ###DEBUG
     case_type = case_type_r
@@ -103,6 +103,7 @@ def requestFeedbackMP(response, **kwargs):
 
     try:
         internal_case_repr = MPCase.create_mp_case(case_data=filtered_case_data)
+        CASE_BATCH_HANDLER.uid_cases.add(internal_case_repr)
     except Exception as ex:
         error = f" > {filtered_case_data['namus_id']} --- {ex}\n"
         traceback.print_exc()
@@ -119,7 +120,7 @@ def requestFeedbackUID(response, **kwargs):
     global errors
     
     try:
-        filtered_case_data = filter_uid_json_for_internal_repr(response.json())
+        filtered_case_data = filter_uid_json_for_internal_repr(response.json()),
     except Exception as ex:
          traceback.print_exc()
          error = f" >!! {ex}\n"
@@ -129,6 +130,7 @@ def requestFeedbackUID(response, **kwargs):
 
     try:
         internal_case_repr = UIDCase.create_uid_case(case_data=filtered_case_data)
+        CASE_BATCH_HANDLER.uid_cases.add(internal_case_repr)
     except Exception as ex:
         error = f" > {filtered_case_data['namus_id']} --- {ex}\n"
         traceback.print_exc()
@@ -140,6 +142,7 @@ def requestFeedbackUID(response, **kwargs):
     completedCases = completedCases + 1
     if completedCases % REQUEST_FEEDBACK_INTERVAL == 0:
         print(" > Completed {count} cases".format(count=completedCases))
+
 
 def fetch_mp_json(namus_id):
     case = requests.get(CASE_ENDPOINT.format(type="MissingPersons", case=namus_id), headers={"User-Agent": USER_AGENT})

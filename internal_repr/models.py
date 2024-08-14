@@ -1,5 +1,7 @@
 import enum
 from django.db import models
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 from .native.case_data_keys import InternalReprKeysConfig
 from .native.case_stats import CaseStats
 
@@ -866,6 +868,11 @@ class CaseImages(models.Model):
             case_images.other_images.add(image_obj)
         
         return case_images
+@receiver(post_delete, sender=CaseImages)
+def handle_case_images_delete(sender, instance, **kwargs):
+    instance.default_image.delete()
+    for image in instance.other_images.all():
+        image.delete()
 
 
 
@@ -1392,13 +1399,13 @@ class MPCase(models.Model):
     related_items = models.OneToOneField(SubjectRelatedItems, on_delete=models.PROTECT, related_name="mp_case")
     
     last_known_location = models.ForeignKey(Sighting, on_delete=models.PROTECT, related_name="mp_cases")
+    
     primary_residence_on_tribal_land = models.ForeignKey(PrimaryResidenceOnTribalLand, on_delete=models.PROTECT, related_name="mp_cases", null=True)
     missing_from_tribal_land = models.ForeignKey(MissingFromTribalLand, on_delete=models.PROTECT, related_name="mp_cases", null=True)
 
     circumstances_of_disappearance = models.TextField(max_length=10000, null=True)
     
     is_resolved = models.BooleanField(null=True)
-    is_archived = models.BooleanField(blank=True, default=False)
 
     primary_investigating_agency = models.ForeignKey(InvestigatingAgencyData, on_delete=models.PROTECT, related_name="mp_cases_primary", null=True)
     secondary_investigating_agencies = models.ManyToManyField(InvestigatingAgencyData, related_name="mp_cases_secondary")
@@ -1420,7 +1427,6 @@ class MPCase(models.Model):
         res += f" » Case Created (Source): {self.case_created}\n"
         res += f" » Case Last Modified (Source): {self.case_last_modified}\n"
         res += f" » Resolved: {self.is_resolved}\n"
-        res += f" » Archived: {self.is_archived}\n"
         
         res += "\n"
         res += str(self.identification)
@@ -1512,6 +1518,24 @@ class MPCase(models.Model):
             data_object = InvestigatingAgencyData.create_investigating_agency_data(investigating_agency_data)
             case.secondary_investigating_agencies.add(data_object)
         
+@receiver(post_delete, sender=MPCase)
+def handle_mp_case_delete(sender, instance, **kwargs):
+    instance.case_images.delete()
+    instance.identification.delete()
+    instance.demographics.delete()
+    instance.description.delete()
+    instance.related_items.delete()
+    if instance.last_known_location != None:
+        instance.last_known_location.delete()
+    if instance.primary_investigating_agency != None:
+        instance.primary_investigating_agency.delete()
+    
+    for secondary_investigating_agency in instance.secondary_investigating_agencies.all():
+        secondary_investigating_agency.delete()
+    if instance.primary_source != None:
+        instance.primary_source.delete()
+    for secondary_source in instance.secondary_sources.all():
+        secondary_source.delete()
 
 
 class UIDStatus(models.Model):
@@ -1702,19 +1726,19 @@ class UIDCase(models.Model):
     details_of_recovery = models.OneToOneField(DetailsOfRecovery, on_delete=models.PROTECT, related_name="uid_case")
 
     case_images = models.ForeignKey(CaseImages, on_delete=models.PROTECT, related_name="uid_case")
-    status = models.ForeignKey(UIDStatus, on_delete=models.CASCADE, related_name="uid_cases", null=True)
-    location_found = models.ForeignKey(Location, on_delete=models.CASCADE, related_name="uid_cases", null=True)
+    status = models.ForeignKey(UIDStatus, on_delete=models.PROTECT, related_name="uid_cases", null=True)
+    location_found = models.ForeignKey(Location, on_delete=models.PROTECT, related_name="uid_cases", null=True)
     found_on_tribal_land = models.ForeignKey(FoundOnTribalLand, on_delete=models.PROTECT, related_name="uid_cases", null=True)
+    
     primary_investigating_agency = models.ForeignKey(InvestigatingAgencyData, on_delete=models.PROTECT, related_name="uid_cases_primary", null=True)
     secondary_investigating_agencies = models.ManyToManyField(InvestigatingAgencyData, related_name="uid_cases_secondary")
-    primary_source = models.ForeignKey(CaseSource, on_delete=models.PROTECT, related_name="uid_cases_primary")
     
+    primary_source = models.ForeignKey(CaseSource, on_delete=models.PROTECT, related_name="uid_cases_primary")
     secondary_sources = models.ManyToManyField(CaseSource, related_name="uid_cases_secondary")
 
     circumstances_of_recovery = models.TextField(max_length=10000, null=True)
 
     is_resolved = models.BooleanField(null=True)
-    is_archived = models.BooleanField(blank=True, default=False)
 
     def __str__(self) -> str:
         res = "\n\n***---------------------------------------------------------------------------------------------------------------------***\n"
@@ -1730,7 +1754,6 @@ class UIDCase(models.Model):
         res += f" » Case Created (Source): {self.case_created}\n"
         res += f" » Case Last Modified (Source): {self.case_last_modified}\n"
         res += f" » Resolved: {self.is_resolved}\n"
-        res += f" » Archived: {self.is_archived}\n"
         
         res += "\n"
         res += str(self.identification)
@@ -1765,7 +1788,6 @@ class UIDCase(models.Model):
             for secondary_source in self.secondary_sources.all():
                 res += f" » {secondary_source}\n"
         return res
-
 
     @staticmethod
     def create_uid_case(case_data):
@@ -1825,6 +1847,46 @@ class UIDCase(models.Model):
         for investigating_agency_data in case_data[InternalReprKeysConfig.INVESTIGATING_AGENCIES_SECONDARY]:
             data_object = InvestigatingAgencyData.create_investigating_agency_data(investigating_agency_data)
             case.secondary_investigating_agencies.add(data_object)
+
+
+@receiver(post_delete, sender=UIDCase)
+def handle_uid_case_delete(sender, instance, **kwargs):
+    instance.case_images.delete()
+    instance.identification.delete()
+    instance.demographics.delete()
+    instance.description.delete()
+    instance.related_items.delete()
+    instance.details_of_recovery.delete()
+    if instance.location_found != None:
+        instance.location_found.delete()
+    if instance.primary_investigating_agency != None:
+        instance.primary_investigating_agency.delete()
+    for secondary_investigating_agency in instance.secondary_investigating_agencies.all():
+        secondary_investigating_agency.delete()
+    if instance.primary_source != None:
+        instance.primary_source.delete()
+    for secondary_source in instance.secondary_sources.all():
+        secondary_source.delete()
+
+
+
+
+
+class ActiveCases(models.Model):
+    mp_cases = models.ManyToManyField(MPCase, related_name="active_storage")
+    uid_cases = models.ManyToManyField(UIDCase, related_name="active_storage")
+
+class ArchivedCases(models.Model):
+    mp_cases = models.ManyToManyField(MPCase, related_name="archive_storage")
+    uid_cases = models.ManyToManyField(UIDCase, related_name="archive_storage")
+
+class CaseBatch(models.Model):
+    mp_cases = models.ManyToManyField(MPCase)
+    uid_cases = models.ManyToManyField(UIDCase)
+
+
+    
+
 
 
 
@@ -1898,6 +1960,10 @@ INTERNAL_MODELS = [
     
     DescriptiveFeatureArticle,
     DescriptiveItemArticle,
+
+    ActiveCases,
+    ArchivedCases,
+    CaseBatch
 ]
 
 ALL_TYPES = INTERNAL_MODELS + INTERNAL_ENUMS
